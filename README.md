@@ -16,6 +16,8 @@ Transform your smart home lighting with the power of SignalRGB, now integrated d
 - 🎨 Apply a wide range of lighting effects
 - 📊 View current effect and available effects list
 
+Want more features? Vote for this [SignalRGB feature request!](https://forum.signalrgb.com/t/rest-api-features/2635)
+
 ## 📋 Requirements
 
 - Home Assistant instance

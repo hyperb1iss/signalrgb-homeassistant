@@ -1,0 +1,12 @@
+{
+  "domain": "signalrgb",
+  "name": "SignalRGB",
+  "codeowners": ["@hyperb1iss"],
+  "config_flow": true,
+  "documentation": "https://github.com/hyperb1iss/signalrgb-homeassistant",
+  "issue_tracker": "https://github.com/hyperb1iss/signalrgb-homeassistant/issues",
+  "iot_class": "assumed_state",
+  "loggers": ["signalrgb"],
+  "requirements": ["signalrgb==0.9.0"],
+  "version": "0.1.0"
+}
