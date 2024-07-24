@@ -1,11 +1,8 @@
 # SignalRGB Home Assistant Integration
 
+[![CI/CD](https://github.com/hyperb1iss/signalrgb-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub Release][releases-shield]][releases]
-[![License][license-shield]](LICENSE)
-
-[![GitHub Activity][commits-shield]][commits]
-[![Project Maintenance][maintenance-shield]][user_profile]
 
 Transform your smart home lighting with the power of SignalRGB, now integrated directly into Home Assistant!
 
@@ -101,12 +98,4 @@ Created by [Stefanie Jane 🌠](https://github.com/hyperb1iss)
 If you find this project useful, consider [buying me a Monster Ultra Violet!](https://ko-fi.com/hyperb1iss)! ⚡️
 
 </div>
-
-[commits-shield]: https://img.shields.io/github/commit-activity/y/custom-components/signalrgb.svg
-[commits]: https://github.com/custom-components/signalrgb/commits/main
-[license-shield]: https://img.shields.io/github/license/custom-components/signalrgb.svg
-[maintenance-shield]: https://img.shields.io/badge/maintainer-%40YourGitHubUsername-blue.svg
-[releases-shield]: https://img.shields.io/github/release/custom-components/signalrgb.svg
-[releases]: https://github.com/custom-components/signalrgb/releases
-[user_profile]: https://github.com/hyperb1iss
 
