@@ -32,6 +32,11 @@ Want more features? Vote for this [SignalRGB feature request!](https://forum.sig
 5. Click "Install" and wait for the installation to complete.
 6. Restart Home Assistant.
 
+NOTE: This component isn't in the official HACS repository yet. You can add it as a custom
+repository for now- go to HACS, click on the 3 dots, click custom repositories, and enter
+"hyperb1iss/signalrgb-homeassistant" for the repository and select "Integration" for the
+category.
+
 ### Manual Installation
 
 1. Download the `signalrgb` folder from this repository.
@@ -39,12 +44,10 @@ Want more features? Vote for this [SignalRGB feature request!](https://forum.sig
    - If the `custom_components` directory doesn't exist, you'll need to create it.
 3. Restart Home Assistant.
 
-### Enable SignalRGB HTTP API
+### Enable SignalRGB API
 
-1. Open SignalRGB on your Windows PC.
-2. Go to Settings > App Settings.
-3. Enable the "Enable HTTP API" option.
-4. Note down the port number (default is 16068).
+By default, SignalRGB listens on port 16038. You may need to open this port on the Windows firewall
+so that Home Assistant can connect to your PC.
 
 ## ⚙️ Configuration
 
