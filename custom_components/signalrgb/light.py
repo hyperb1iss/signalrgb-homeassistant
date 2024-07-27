@@ -93,6 +93,7 @@ class SignalRGBLight(LightEntity):
         """Update the effect attributes."""
         self._effect_attributes = {
             "effect_name": effect.attributes.name,
+            "effect_image": effect.attributes.image,
             "effect_description": effect.attributes.description,
             "effect_developer": effect.attributes.developer_effect,
             "effect_publisher": effect.attributes.publisher,
