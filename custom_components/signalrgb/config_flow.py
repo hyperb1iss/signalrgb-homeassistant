@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -28,7 +29,7 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -37,19 +38,20 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=DATA_SCHEMA, errors=errors
             )
 
-        errors = {}
-
         try:
             client = SignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
             await self.hass.async_add_executor_job(client.get_current_effect)
-        except SignalRGBException as ex:
-            if str(ex) == "Invalid Authentication":
-                errors["base"] = "invalid_auth"
-            elif str(ex) == "Invalid Host":
-                errors["base"] = "invalid_host"
-            else:
-                errors["base"] = "cannot_connect"
+        except InvalidAuth:
+            errors["base"] = "invalid_auth"
+        except InvalidHost:
+            errors["base"] = "invalid_host"
+        except CannotConnect:
+            errors["base"] = "cannot_connect"
+        except Exception:  # pylint: disable=broad-except
+            errors["base"] = "unknown"
         else:
+            await self.async_set_unique_id(f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}")
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
 
         return self.async_show_form(

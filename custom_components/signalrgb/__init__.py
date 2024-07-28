@@ -14,6 +14,12 @@ from .const import DOMAIN, LOGGER
 PLATFORMS: list[Platform] = [Platform.LIGHT]
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the SignalRGB component."""
+    hass.data.setdefault(DOMAIN, {})
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SignalRGB from a config entry."""
     LOGGER.debug("Setting up SignalRGB integration for %s", entry.data[CONF_HOST])

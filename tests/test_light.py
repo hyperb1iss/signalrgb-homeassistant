@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.signalrgb import async_setup_entry, async_unload_entry
-from homeassistant.components.signalrgb.const import (
+from custom_components.signalrgb import async_setup_entry, async_unload_entry
+from custom_components.signalrgb.const import (
     ALL_OFF_EFFECT,
     DEFAULT_EFFECT,
     DEFAULT_PORT,
     DOMAIN,
 )
-from homeassistant.components.signalrgb.light import SignalRGBLight
+from custom_components.signalrgb.light import SignalRGBLight
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
@@ -24,7 +24,7 @@ PLATFORMS = ["light"]
 @pytest.fixture
 def mock_signalrgb_client():
     """Mock SignalRGB client."""
-    with patch("homeassistant.components.signalrgb.SignalRGBClient") as mock_client:
+    with patch("custom_components.signalrgb.SignalRGBClient") as mock_client:
         yield mock_client
 
 
