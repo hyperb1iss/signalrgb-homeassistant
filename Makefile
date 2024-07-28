@@ -22,6 +22,9 @@ check:
 	poetry run mypy custom_components
 	poetry run ruff check .
 
+update:
+	@./scripts/release.py update-hass
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
