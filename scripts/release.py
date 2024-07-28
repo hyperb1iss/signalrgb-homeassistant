@@ -91,6 +91,7 @@ def update_manifest(
 
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(ordered_manifest, f, indent=2)
+            f.write("\n")
 
         print_message(
             f"✅ Updated manifest version to {new_version} and reordered entries"
