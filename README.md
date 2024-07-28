@@ -1,10 +1,16 @@
-# SignalRGB Home Assistant Integration
+<div align="center">
 
-[![CI/CD](https://github.com/hyperb1iss/signalrgb-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+# 🌈✨ SignalRGB Home Assistant Integration
+
+[<img src="https://img.shields.io/github/actions/workflow/status/hyperb1iss/signalrgb-homeassistant/validate.yml?style=for-the-badge&logo=github&label=CI%2FCD" alt="CI/CD">](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
+[<img src="https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge">](https://github.com/custom-components/hacs)
+[<img src="https://img.shields.io/github/license/hyperb1iss/signalrgb-homeassistant?style=for-the-badge" alt="License">](https://opensource.org/licenses/Apache-2.0)
 
 Transform your smart home lighting with the power of SignalRGB, now integrated directly into Home Assistant!
+
+[Features](#-features) • [Requirements](#-requirements) • [Installation](#%EF%B8%8F-installation) • [Configuration](#%EF%B8%8F-configuration) • [Usage](#-usage) • [Development](#-development) • [Contributing](#-contributing) • [Support](#-support)
+
+</div>
 
 ## 🌟 Features
 
@@ -12,14 +18,16 @@ Transform your smart home lighting with the power of SignalRGB, now integrated d
 - 🔌 Seamless on/off control
 - 🎨 Apply a wide range of lighting effects
 - 📊 View current effect and available effects list
+- 🔄 Automatic effect image and color extraction
+- 🎛️ Effect parameter control (coming soon!)
 
-Want more features? Vote for this [SignalRGB feature request!](https://forum.signalrgb.com/t/rest-api-features/2635)
+Want more features? Vote for this [SignalRGB feature request](https://forum.signalrgb.com/t/rest-api-features/2635)!
 
 ## 📋 Requirements
 
-- Home Assistant instance
+- Home Assistant 2024.2.0 or newer
 - SignalRGB software installed and running on a Windows PC on your network
-- SignalRGB HTTP API enabled
+- SignalRGB HTTP API enabled (default port: 16038)
 
 ## 🛠️ Installation
 
@@ -32,10 +40,13 @@ Want more features? Vote for this [SignalRGB feature request!](https://forum.sig
 5. Click "Install" and wait for the installation to complete.
 6. Restart Home Assistant.
 
-NOTE: This component isn't in the official HACS repository yet. You can add it as a custom
-repository for now- go to HACS, click on the 3 dots, click custom repositories, and enter
-"hyperb1iss/signalrgb-homeassistant" for the repository and select "Integration" for the
-category.
+> **Note**: This component isn't in the official HACS repository yet. You can add it as a custom repository:
+> 1. Go to HACS
+> 2. Click on the three dots in the top right corner
+> 3. Select "Custom repositories"
+> 4. Enter "hyperb1iss/signalrgb-homeassistant" for the repository
+> 5. Select "Integration" for the category
+> 6. Click "Add"
 
 ### Manual Installation
 
@@ -46,14 +57,18 @@ category.
 
 ### Enable SignalRGB API
 
-By default, SignalRGB listens on port 16038. You may need to open this port on the Windows firewall
-so that Home Assistant can connect to your PC.
+Ensure that the SignalRGB API is enabled and accessible:
+
+1. Open SignalRGB on your Windows PC.
+2. Go to Settings > General > Enable HTTP API.
+3. Note the port number (default is 16038).
+4. If necessary, configure your Windows firewall to allow incoming connections on this port.
 
 ## ⚙️ Configuration
 
-After installation, you can add the SignalRGB integration through the Home Assistant UI:
+After installation, add the SignalRGB integration through the Home Assistant UI:
 
-1. Go to Configuration > Integrations.
+1. Navigate to **Configuration** > **Integrations**.
 2. Click the "+" button to add a new integration.
 3. Search for "SignalRGB" and select it.
 4. Enter the hostname or IP address of the PC running SignalRGB and the port number.
@@ -61,36 +76,89 @@ After installation, you can add the SignalRGB integration through the Home Assis
 
 ## 🚀 Usage
 
-Once configured, SignalRGB will appear as a light entity in Home Assistant. You can control it like any other light entity:
+Once configured, SignalRGB will appear as a light entity in Home Assistant. You can:
 
-- Turn it on/off
-- Select different effects from the effect list
-- Include it in automations, scripts, and scenes
+- 💡 Turn it on/off
+- 🎨 Select different effects from the effect list
+- 🏠 Include it in automations, scripts, and scenes
+- 👁️ View effect details and parameters
 
-## 🔍 Troubleshooting
+Example automation:
 
-If you encounter any issues:
+```yaml
+automation:
+  - alias: "Gaming Time"
+    trigger:
+      platform: state
+      entity_id: binary_sensor.gaming_pc_status
+      to: 'on'
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.signalrgb
+        data:
+          effect: "Cyberpunk 2077"
+```
 
-1. Ensure that SignalRGB is running and the HTTP API is enabled.
-2. Check that the IP address and port are correct in the integration configuration.
-3. Verify that your Home Assistant instance can reach the PC running SignalRGB on your network.
-4. Check the Home Assistant logs for any error messages related to SignalRGB.
+## 🛠 Development
+
+This project uses Poetry for dependency management and packaging. To set up the development environment:
+
+1. Install [Poetry](https://python-poetry.org/docs/#installation)
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/hyperb1iss/signalrgb-homeassistant.git
+   ```
+3. Navigate to the project directory:
+   ```bash
+   cd signalrgb-homeassistant
+   ```
+4. Install dependencies:
+   ```bash
+   poetry install
+   ```
+5. Activate the virtual environment:
+   ```bash
+   poetry shell
+   ```
+6. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
+
+### Useful Commands
+
+- Run tests: `make test`
+- Lint code: `make lint`
+- Format code: `make format`
+- Run all checks: `make check`
 
 ## 🤝 Contributing
 
-Contributions to this component are welcome! Please feel free to submit pull requests or open issues on the GitHub repository.
+We welcome contributions to the SignalRGB Home Assistant Integration! Here's how you can help:
 
-## 📄 License
+1. Fork the repository
+2. Create a new branch: `git checkout -b feature/your-feature-name`
+3. Make your changes and commit them using [Gitmoji](https://gitmoji.dev/): `git commit -m ":sparkles: Add amazing feature"`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Submit a pull request
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
-
-## ⚠️ Disclaimer
-
-This component is not officially affiliated with or endorsed by WhirlwindFX or SignalRGB. Use at your own risk.
+Please ensure your code adheres to our style guidelines and passes all tests.
 
 ## 🆘 Support
 
-For support, please open an issue on the GitHub repository. For general discussion or questions, you can use the Home Assistant community forums.
+- 📚 For documentation and general questions, check out our [Wiki](https://github.com/hyperb1iss/signalrgb-homeassistant/wiki).
+- 🐛 Found a bug? [Open an issue](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new?assignees=&labels=bug&template=bug_report.md&title=).
+- 💡 Have a feature idea? [Submit a feature request](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=).
+- 💬 For general discussion, join our [Discord community](https://discord.gg/your-discord-invite).
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## ⚠️ Disclaimer
+
+This integration is not officially affiliated with or endorsed by WhirlwindFX or SignalRGB. Use at your own risk.
 
 ---
 
@@ -98,7 +166,6 @@ For support, please open an issue on the GitHub repository. For general discussi
 
 Created by [Stefanie Jane 🌠](https://github.com/hyperb1iss)
 
-If you find this project useful, consider [buying me a Monster Ultra Violet!](https://ko-fi.com/hyperb1iss)! ⚡️
+If you find this project useful, [buy me a Monster Ultra Violet](https://ko-fi.com/hyperb1iss)! ⚡️
 
 </div>
-
