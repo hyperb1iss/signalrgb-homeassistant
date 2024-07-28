@@ -6,7 +6,7 @@ import pytest
 from signalrgb.client import SignalRGBException
 
 from homeassistant import config_entries, data_entry_flow
-from custom_components.signalrgb.const import DOMAIN
+from homeassistant.components.signalrgb.const import DOMAIN
 from homeassistant.core import HomeAssistant
 
 
@@ -19,7 +19,7 @@ async def test_form(hass: HomeAssistant, mock_signalrgb) -> None:
     assert result["errors"] == {}
 
     with patch(
-        "custom_components.signalrgb.async_setup_entry",
+        "homeassistant.components.signalrgb.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
@@ -89,6 +89,6 @@ async def test_form_error(
 def mock_signalrgb_client():
     """Mock SignalRGBClient."""
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient"
+        "homeassistant.components.signalrgb.config_flow.SignalRGBClient"
     ) as mock_client:
         yield mock_client
