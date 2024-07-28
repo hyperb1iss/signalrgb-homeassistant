@@ -1,0 +1,100 @@
+[tool.poetry]
+name = "signalrgb-homeassistant"
+version = "0.2.4"
+description = "Home Assistant integration for SignalRGB"
+authors = ["Stefanie Jane <stef@hyperbliss.tech>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/hyperb1iss/signalrgb-homeassistant"
+repository = "https://github.com/hyperb1iss/signalrgb-homeassistant"
+documentation = "https://github.com/hyperb1iss/signalrgb-homeassistant"
+keywords = ["home-assistant", "signalrgb", "integration"]
+classifiers = [
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [
+    { include = "custom_components" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.13"
+homeassistant = ">=2024.6.3"
+signalrgb = "0.9.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2"
+pytest-cov = "^5.0"
+pytest-asyncio = "^0.23.0"
+pytest-homeassistant-custom-component = "^0.13"
+black = "^23.3.0"
+isort = "^5.12.0"
+mypy = "^1.11"
+pylint = "^3.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+norecursedirs = [".git", "venv", ".venv", "dist", "build"]
+
+[tool.coverage.run]
+source = ["custom_components.signalrgb"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError:",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pylint.messages_control]
+disable = [
+    "C0103",  # invalid-name
+    "C0111",  # missing-docstring
+    "W0611",  # unused-import
+]
+
+[tool.pylint.format]
+max-line-length = 88
