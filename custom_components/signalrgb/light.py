@@ -10,6 +10,7 @@ from signalrgb.client import SignalRGBClient, SignalRGBException
 from signalrgb.model import Effect
 
 from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ColorMode,
     LightEntity,
@@ -26,7 +27,6 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import (
-    ALL_OFF_EFFECT,
     DEFAULT_EFFECT,
     DOMAIN,
     LOGGER,
@@ -45,7 +45,16 @@ async def async_setup_entry(
     async def async_update_data():
         """Fetch data from API endpoint."""
         try:
-            return await hass.async_add_executor_job(client.get_current_effect)
+            current_effect = await hass.async_add_executor_job(
+                client.get_current_effect
+            )
+            is_on = await hass.async_add_executor_job(lambda: client.enabled)
+            brightness = await hass.async_add_executor_job(lambda: client.brightness)
+            return {
+                "current_effect": current_effect,
+                "is_on": is_on,
+                "brightness": brightness,
+            }
         except SignalRGBException as err:
             raise HomeAssistantError(f"Error communicating with API: {err}") from err
 
@@ -68,10 +77,9 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_color_mode = ColorMode.ONOFF
-    _attr_supported_color_modes = {ColorMode.ONOFF}
+    _attr_color_mode = ColorMode.BRIGHTNESS
+    _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
     _attr_supported_features = LightEntityFeature.EFFECT
-    _current_effect_task: asyncio.Task | None = None
 
     def __init__(
         self,
@@ -90,10 +98,11 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self._last_active_effect: str | None = None
         self._effect_list: list[str] = []
         self.entity_id = f"light.signalrgb_{config_entry.entry_id}"
         self._current_effect: Effect | None = None
+        self._is_on: bool = False
+        self._brightness: int = 0  # This is now 0-100
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
@@ -104,10 +113,12 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return true if light is on."""
-        return (
-            self._current_effect is not None
-            and self._current_effect.attributes.name != ALL_OFF_EFFECT
-        )
+        return self._is_on
+
+    @property
+    def brightness(self) -> int:
+        """Return the brightness of this light between 0..255."""
+        return round(self._brightness * 255 / 100)  # Convert 0-100 to 0-255
 
     @property
     def effect(self) -> str | None:
@@ -141,12 +152,36 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on."""
-        effect = kwargs.get(ATTR_EFFECT, self._last_active_effect or DEFAULT_EFFECT)
-        await self._apply_effect(effect)
+        if not self.is_on:
+            await self.hass.async_add_executor_job(
+                setattr, self._client, "enabled", True
+            )
+            self._is_on = True
+            self.async_write_ha_state()
+
+        if ATTR_BRIGHTNESS in kwargs:
+            brightness = kwargs[ATTR_BRIGHTNESS]
+            brightness_percent = round(brightness * 100 / 255)  # Convert 0-255 to 0-100
+            await self.hass.async_add_executor_job(
+                setattr, self._client, "brightness", brightness_percent
+            )
+            self._brightness = brightness_percent
+            self.async_write_ha_state()
+
+        if ATTR_EFFECT in kwargs:
+            await self._apply_effect(kwargs[ATTR_EFFECT])
+        elif not self._current_effect:
+            await self._apply_effect(DEFAULT_EFFECT)
+
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Instruct the light to turn off."""
-        await self._apply_effect(ALL_OFF_EFFECT)
+        await self.hass.async_add_executor_job(setattr, self._client, "enabled", False)
+        self._is_on = False
+        self.async_write_ha_state()
+        await asyncio.sleep(0.5)  # Small delay to ensure the client has time to update
+        await self.coordinator.async_request_refresh()
 
     async def _apply_effect(self, effect: str) -> None:
         """Apply the specified effect."""
@@ -159,38 +194,18 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
                 self._client.apply_effect, effect_obj.id
             )
 
-            if effect != ALL_OFF_EFFECT:
-                self._last_active_effect = effect
-
             self._current_effect = effect_obj
-            await self.coordinator.async_request_refresh()
             self.async_write_ha_state()
 
         except SignalRGBException as err:
             LOGGER.error("Failed to apply effect %s: %s", effect, err)
             raise HomeAssistantError(f"Failed to apply effect: {err}") from err
 
-    async def _async_apply_effect(self, effect_obj: Effect) -> None:
-        """Asynchronously apply the effect and update coordinator."""
-        try:
-            await self.hass.async_add_executor_job(
-                self._client.apply_effect, effect_obj.id
-            )
-            await self.coordinator.async_request_refresh()
-        except Exception as err:  # noqa: BLE001
-            LOGGER.error("Error applying effect: %s", err)
-            # You might want to update the state here to reflect the error
-            self.async_write_ha_state()
-
     async def async_update_effect_list(self) -> None:
         """Update the list of available effects."""
         try:
             effects = await self.hass.async_add_executor_job(self._client.get_effects)
-            self._effect_list = [
-                effect.attributes.name
-                for effect in effects
-                if effect.attributes.name != ALL_OFF_EFFECT
-            ]
+            self._effect_list = [effect.attributes.name for effect in effects]
         except SignalRGBException as err:
             LOGGER.error("Failed to fetch effect list: %s", err)
             self._effect_list = []
@@ -198,10 +213,9 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        if isinstance(self.coordinator.data, Effect):
-            self._current_effect = self.coordinator.data
+        data = self.coordinator.data
+        if data:
+            self._current_effect = data.get("current_effect")
+            self._is_on = data.get("is_on", False)
+            self._brightness = data.get("brightness", 0)  # This is now 0-100
         self.async_write_ha_state()
-
-    async def async_update(self) -> None:
-        """Update the entity."""
-        await self.coordinator.async_request_refresh()

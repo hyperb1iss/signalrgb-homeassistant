@@ -56,9 +56,7 @@ def copy_integration(src_path: str, dest_path: str, verbose: bool = False) -> No
         if os.path.exists(dest_path):
             shutil.rmtree(dest_path)
             if verbose:
-                print_message(
-                    f"🗑️ Removed existing directory at {dest_path}", Fore.BLUE
-                )
+                print_message(f"🗑️ Removed existing directory at {dest_path}", Fore.BLUE)
         shutil.copytree(src_path, dest_path)
         print_message(f"✅ Copied integration from {src_path} to {dest_path}")
     except OSError as e:
@@ -145,7 +143,9 @@ def do_release(src_path: str, version: str, verbose: bool = False) -> None:
     update_manifest(manifest_path, version, verbose)
     git_commit_and_tag(version, verbose)
 
-    print_message(f"\n🎉 Release [{version}] process completed successfully!", Fore.CYAN)
+    print_message(
+        f"\n🎉 Release [{version}] process completed successfully!", Fore.CYAN
+    )
     print_message(
         "⚠️  Don't forget to push the changes and the new tag to GitHub.", Fore.YELLOW
     )
@@ -180,7 +180,9 @@ def main() -> None:
         update_hass(src_path, args.verbose)
     elif args.command == "release":
         if not args.version:
-            print_message("❌ Version number is required for release command.", Fore.RED)
+            print_message(
+                "❌ Version number is required for release command.", Fore.RED
+            )
             sys.exit(1)
         do_release(src_path, args.version, args.verbose)
 

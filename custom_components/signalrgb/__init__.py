@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from signalrgb.client import SignalRGBClient, SignalRGBException
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from signalrgb.client import SignalRGBClient, SignalRGBException
 
 from .const import DOMAIN, LOGGER
 
@@ -27,6 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client = SignalRGBClient(entry.data[CONF_HOST], entry.data[CONF_PORT])
 
     try:
+        # Test the connection by getting the current effect
         await hass.async_add_executor_job(client.get_current_effect)
     except SignalRGBException as err:
         LOGGER.error(

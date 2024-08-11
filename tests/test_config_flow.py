@@ -6,12 +6,12 @@ import pytest
 from homeassistant import config_entries, data_entry_flow
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.signalrgb.const import DOMAIN
 from custom_components.signalrgb.config_flow import (
     CannotConnect,
     InvalidAuth,
     InvalidHost,
 )
+from custom_components.signalrgb.const import DOMAIN
 
 
 # This fixture bypasses the actual setup of the integration
@@ -20,8 +20,9 @@ from custom_components.signalrgb.config_flow import (
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
     """Prevent setup."""
-    with patch("custom_components.signalrgb.async_setup", return_value=True), patch(
-        "custom_components.signalrgb.async_setup_entry", return_value=True
+    with (
+        patch("custom_components.signalrgb.async_setup", return_value=True),
+        patch("custom_components.signalrgb.async_setup_entry", return_value=True),
     ):
         yield
 

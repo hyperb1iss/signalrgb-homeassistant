@@ -16,6 +16,7 @@ Transform your smart home lighting with the power of SignalRGB, now integrated d
 
 - 💡 Control SignalRGB as a light entity in Home Assistant
 - 🔌 Seamless on/off control
+- 🔆 Adjust brightness
 - 🎨 Apply a wide range of lighting effects
 - 📊 View current effect and available effects list
 - 🔄 Automatic effect image and color extraction
@@ -41,6 +42,7 @@ Want more features? Vote for this [SignalRGB feature request](https://forum.sign
 6. Restart Home Assistant.
 
 > **Note**: This component isn't in the official HACS repository yet. You can add it as a custom repository:
+>
 > 1. Go to HACS
 > 2. Click on the three dots in the top right corner
 > 3. Select "Custom repositories"
@@ -79,6 +81,7 @@ After installation, add the SignalRGB integration through the Home Assistant UI:
 Once configured, SignalRGB will appear as a light entity in Home Assistant. You can:
 
 - 💡 Turn it on/off
+- 🔆 Adjust brightness
 - 🎨 Select different effects from the effect list
 - 🏠 Include it in automations, scripts, and scenes
 - 👁️ View effect details and parameters
@@ -91,13 +94,28 @@ automation:
     trigger:
       platform: state
       entity_id: binary_sensor.gaming_pc_status
-      to: 'on'
+      to: "on"
     action:
       - service: light.turn_on
         target:
           entity_id: light.signalrgb
         data:
           effect: "Cyberpunk 2077"
+          brightness: 255 # Full brightness
+```
+
+Example script:
+
+```yaml
+script:
+  movie_mode:
+    sequence:
+      - service: light.turn_on
+        target:
+          entity_id: light.signalrgb
+        data:
+          effect: "Ambient Glow"
+          brightness: 128 # 50% brightness
 ```
 
 ## 🛠 Development

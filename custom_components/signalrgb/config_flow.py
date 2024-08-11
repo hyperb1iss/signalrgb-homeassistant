@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from signalrgb.client import SignalRGBClient, SignalRGBException
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.exceptions import HomeAssistantError
+from signalrgb.client import SignalRGBClient, SignalRGBException
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -50,7 +49,9 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
         except Exception:  # pylint: disable=broad-except
             errors["base"] = "unknown"
         else:
-            await self.async_set_unique_id(f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}")
+            await self.async_set_unique_id(
+                f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}"
+            )
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
 
