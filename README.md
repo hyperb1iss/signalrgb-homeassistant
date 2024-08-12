@@ -16,8 +16,8 @@ Transform your smart home lighting with the power of SignalRGB, now integrated d
 
 - 💡 Control SignalRGB as a light entity in Home Assistant
 - 🔌 Seamless on/off control
-- 🔆 Adjust brightness
 - 🎨 Apply a wide range of lighting effects
+- 🔆 Adjust brightness of your entire SignalRGB setup
 - 📊 View current effect and available effects list
 - 🔄 Automatic effect image and color extraction
 - 🎛️ Effect parameter control (coming soon!)
@@ -42,7 +42,6 @@ Want more features? Vote for this [SignalRGB feature request](https://forum.sign
 6. Restart Home Assistant.
 
 > **Note**: This component isn't in the official HACS repository yet. You can add it as a custom repository:
->
 > 1. Go to HACS
 > 2. Click on the three dots in the top right corner
 > 3. Select "Custom repositories"
@@ -81,8 +80,8 @@ After installation, add the SignalRGB integration through the Home Assistant UI:
 Once configured, SignalRGB will appear as a light entity in Home Assistant. You can:
 
 - 💡 Turn it on/off
-- 🔆 Adjust brightness
 - 🎨 Select different effects from the effect list
+- 🔆 Adjust the brightness of your entire SignalRGB setup
 - 🏠 Include it in automations, scripts, and scenes
 - 👁️ View effect details and parameters
 
@@ -94,29 +93,43 @@ automation:
     trigger:
       platform: state
       entity_id: binary_sensor.gaming_pc_status
-      to: "on"
+      to: 'on'
     action:
       - service: light.turn_on
         target:
           entity_id: light.signalrgb
         data:
           effect: "Cyberpunk 2077"
-          brightness: 255 # Full brightness
+          brightness: 255
 ```
 
-Example script:
+You can also control the brightness using slider controls in the Home Assistant UI or by calling the `light.turn_on` service with a brightness value:
 
 ```yaml
-script:
-  movie_mode:
-    sequence:
-      - service: light.turn_on
-        target:
-          entity_id: light.signalrgb
-        data:
-          effect: "Ambient Glow"
-          brightness: 128 # 50% brightness
+service: light.turn_on
+target:
+  entity_id: light.signalrgb
+data:
+  brightness: 128  # Values range from 0 (off) to 255 (full brightness)
 ```
+
+## 🎨 Enhance Your UI with hyper-light-card
+
+To take your SignalRGB control to the next level, check out the [hyper-light-card](https://github.com/hyperb1iss/hyper-light-card) for Home Assistant! This custom card provides a beautiful, intuitive interface for controlling your SignalRGB setup, featuring:
+
+- 🌈 Dynamic color adaptation based on the current effect
+- 📊 Detailed effect information display
+- 🖼️ Effect preview images
+- 🔧 Easy effect switching and parameter control
+
+To install hyper-light-card:
+
+1. Add it to HACS as a custom repository (Frontend category)
+2. Install it through HACS
+3. Add a new card to your dashboard and select "Hyper Light Card"
+4. Choose your SignalRGB entity
+
+Experience the perfect blend of functionality and aesthetics with hyper-light-card and SignalRGB!
 
 ## 🛠 Development
 
