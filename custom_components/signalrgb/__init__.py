@@ -13,7 +13,7 @@ from .const import DOMAIN, LOGGER
 PLATFORMS: list[Platform] = [Platform.LIGHT]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up the SignalRGB component."""
     hass.data.setdefault(DOMAIN, {})
     return True
@@ -57,4 +57,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Failed to unload SignalRGB integration for %s", entry.data[CONF_HOST]
         )
 
-    return unload_ok
+    return bool(unload_ok)

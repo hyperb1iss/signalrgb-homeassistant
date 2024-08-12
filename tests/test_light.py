@@ -1,23 +1,20 @@
 """Unit tests for the SignalRGB component."""
 
-import asyncio
+# pylint: disable=protected-access, redefined-outer-name
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from custom_components.signalrgb import async_setup_entry, async_unload_entry
 from custom_components.signalrgb.const import (
-    DEFAULT_EFFECT,
     DEFAULT_PORT,
     DOMAIN,
 )

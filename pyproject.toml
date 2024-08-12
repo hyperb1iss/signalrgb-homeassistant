@@ -93,14 +93,15 @@ ignore_missing_imports = true
 [tool.pylint]
 max-line-length = 88
 disable = [
-    "C0103", # invalid-name
-    "C0111", # missing-docstring
-    "W0611", # unused-import
+    "W0212",
+    "W0621",
 
 ]
 
 [tool.ruff]
-select = ["E", "F", "B", "I", "N", "W", "C"]
-ignore = ["E501"]
 line-length = 88
 target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "N", "W", "C"]
+ignore = ["E501"]

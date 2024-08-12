@@ -1,13 +1,12 @@
 """Support for SignalRGB lights."""
 
+# pylint: disable=too-many-instance-attributes, abstract-method
+
 from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
 from typing import Any
-
-from signalrgb.client import SignalRGBClient, SignalRGBException
-from signalrgb.model import Effect
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -25,6 +24,8 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from signalrgb.client import SignalRGBClient, SignalRGBException
+from signalrgb.model import Effect
 
 from .const import (
     DEFAULT_EFFECT,

@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from signalrgb.client import SignalRGBClient, SignalRGBException
+from signalrgb.client import SignalRGBClient
 
-from .const import DEFAULT_PORT, DOMAIN
+from .const import DEFAULT_PORT
 
 DATA_SCHEMA = vol.Schema(
     {
@@ -21,7 +21,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
+class SignalRGBConfigFlow(ConfigFlow):
     """Handle a config flow for SignalRGB."""
 
     VERSION = 1
@@ -40,11 +40,11 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             client = SignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
             await self.hass.async_add_executor_job(client.get_current_effect)
-        except InvalidAuth:
+        except InvalidAuthError:
             errors["base"] = "invalid_auth"
-        except InvalidHost:
+        except InvalidHostError:
             errors["base"] = "invalid_host"
-        except CannotConnect:
+        except CannotConnectError:
             errors["base"] = "cannot_connect"
         except Exception:  # pylint: disable=broad-except
             errors["base"] = "unknown"
@@ -60,13 +60,13 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnectError(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuthError(HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHostError(HomeAssistantError):
     """Error to indicate there is an invalid host."""
