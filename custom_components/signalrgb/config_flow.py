@@ -11,7 +11,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from signalrgb.client import SignalRGBClient
 
-from .const import DEFAULT_PORT
+from .const import DEFAULT_PORT, DOMAIN
 
 DATA_SCHEMA = vol.Schema(
     {
@@ -21,7 +21,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class SignalRGBConfigFlow(ConfigFlow):
+class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SignalRGB."""
 
     VERSION = 1

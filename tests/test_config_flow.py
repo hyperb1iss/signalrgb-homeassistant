@@ -7,9 +7,9 @@ from homeassistant import config_entries, data_entry_flow
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.signalrgb.config_flow import (
-    CannotConnect,
-    InvalidAuth,
-    InvalidHost,
+    CannotConnectError,
+    InvalidAuthError,
+    InvalidHostError,
 )
 from custom_components.signalrgb.const import DOMAIN
 
@@ -62,7 +62,7 @@ async def test_form_invalid_auth(hass):
 
     with patch(
         "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=InvalidAuth,
+        side_effect=InvalidAuthError,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -81,7 +81,7 @@ async def test_form_cannot_connect(hass):
 
     with patch(
         "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=CannotConnect,
+        side_effect=CannotConnectError,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -100,7 +100,7 @@ async def test_form_invalid_host(hass):
 
     with patch(
         "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=InvalidHost,
+        side_effect=InvalidHostError,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],

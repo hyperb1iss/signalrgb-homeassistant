@@ -108,9 +108,7 @@ class TestSignalRGBLight:
             setattr, mock_light._client, "enabled", True
         )
         assert mock_light._is_on is True
-        assert (
-            mock_light.async_write_ha_state.call_count == 2
-        )  # Once for turning on, once for refresh
+        assert mock_light.async_write_ha_state.call_count == 1  # Once for turning on
         mock_coordinator.async_request_refresh.assert_called_once()
 
     async def test_turn_on_with_brightness(self, mock_light, mock_coordinator):
@@ -125,8 +123,8 @@ class TestSignalRGBLight:
         assert mock_light._is_on is True
         assert mock_light._brightness == 50
         assert (
-            mock_light.async_write_ha_state.call_count == 3
-        )  # Once for on, once for brightness, once for refresh
+            mock_light.async_write_ha_state.call_count == 2
+        )  # Once for on, once for brightness
         mock_coordinator.async_request_refresh.assert_called_once()
 
     async def test_turn_on_with_effect(self, mock_light, mock_coordinator):

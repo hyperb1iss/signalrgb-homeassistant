@@ -28,7 +28,6 @@ from signalrgb.client import SignalRGBClient, SignalRGBException
 from signalrgb.model import Effect
 
 from .const import (
-    DEFAULT_EFFECT,
     DOMAIN,
     LOGGER,
     MANUFACTURER,
@@ -171,8 +170,6 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
         if ATTR_EFFECT in kwargs:
             await self._apply_effect(kwargs[ATTR_EFFECT])
-        elif not self._current_effect:
-            await self._apply_effect(DEFAULT_EFFECT)
 
         await self.coordinator.async_request_refresh()
 
