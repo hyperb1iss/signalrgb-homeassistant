@@ -2,7 +2,7 @@
 
 # 🌈✨ SignalRGB Home Assistant Integration
 
-[<img src="https://img.shields.io/github/actions/workflow/status/hyperb1iss/signalrgb-homeassistant/validate.yml?style=for-the-badge&logo=github&label=CI%2FCD" alt="CI/CD">](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
+[<img src="https://img.shields.io/github/actions/workflow/status/hyperb1iss/signalrgb-homeassistant/ci-cd.yml?style=for-the-badge&logo=github&label=CI%2FCD" alt="CI/CD">](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
 [<img src="https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge">](https://github.com/custom-components/hacs)
 [<img src="https://img.shields.io/github/license/hyperb1iss/signalrgb-homeassistant?style=for-the-badge" alt="License">](https://opensource.org/licenses/Apache-2.0)
 
