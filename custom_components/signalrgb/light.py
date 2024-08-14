@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from typing import Any
 
@@ -112,7 +113,10 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._current_effect: Effect | None = None
         self._is_on: bool = False
         self._brightness: int = 0  # This is now 0-100
-        self._pending_effect: str | None = None
+        self._requested_effect: str | None = None
+        self._retry_count: int = 0
+        self._max_retries: int = 3
+        self._refresh_task: asyncio.Task | None = None
         LOGGER.debug("SignalRGBLight initialized: %s", self.entity_id)
 
     async def async_added_to_hass(self) -> None:
@@ -179,6 +183,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on."""
         LOGGER.debug("Turning on %s with kwargs: %s", self.entity_id, kwargs)
+
         if not self.is_on:
             LOGGER.debug("Light was off, turning on")
             await self.hass.async_add_executor_job(
@@ -201,11 +206,12 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
         if ATTR_EFFECT in kwargs:
             effect = kwargs[ATTR_EFFECT]
-            LOGGER.debug("Applying effect: %s", effect)
+            LOGGER.debug("Requesting effect: %s", effect)
+            self._requested_effect = effect
+            self._retry_count = 0
             await self._apply_effect(effect)
 
-        # Schedule a delayed refresh
-        await self.coordinator.async_request_refresh()
+        self._schedule_delayed_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Instruct the light to turn off."""
@@ -230,14 +236,49 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
             # Update state immediately
             self._current_effect = effect_obj
-            self._pending_effect = effect
             self.async_write_ha_state()
             LOGGER.debug("Effect applied and state updated immediately: %s", effect)
 
-            # await self.coordinator.async_request_refresh()
         except SignalRGBException as err:
             LOGGER.error("Failed to apply effect %s: %s", effect, err)
             raise HomeAssistantError(f"Failed to apply effect: {err}") from err
+
+    def _schedule_delayed_refresh(self) -> None:
+        """Schedule a delayed refresh to verify the effect was applied correctly."""
+        if self._refresh_task:
+            self._refresh_task.cancel()
+
+        self._refresh_task = asyncio.create_task(self._delayed_refresh())
+
+    async def _delayed_refresh(self) -> None:
+        """Perform a delayed refresh and retry if necessary."""
+        await asyncio.sleep(2)  # Wait for 2 seconds before refreshing
+        await self.coordinator.async_request_refresh()
+
+        if self._requested_effect and self.effect != self._requested_effect:
+            LOGGER.warning(
+                "Applied effect doesn't match requested effect. "
+                "Requested: %s, Applied: %s",
+                self._requested_effect,
+                self.effect,
+            )
+            if self._retry_count < self._max_retries:
+                self._retry_count += 1
+                LOGGER.debug(
+                    "Retrying effect application (Attempt %s of %s)",
+                    self._retry_count,
+                    self._max_retries,
+                )
+                await self._apply_effect(self._requested_effect)
+                self._schedule_delayed_refresh()
+            else:
+                LOGGER.error(
+                    "Failed to apply effect %s after %s attempts",
+                    self._requested_effect,
+                    self._max_retries,
+                )
+                self._requested_effect = None
+                self._retry_count = 0
 
     async def async_update_effect_list(self) -> None:
         """Update the list of available effects."""
@@ -266,16 +307,25 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             ):
                 self._current_effect = new_effect
                 if (
-                    self._pending_effect
-                    and new_effect.attributes.name != self._pending_effect
+                    self._requested_effect
+                    and new_effect.attributes.name != self._requested_effect
                 ):
                     LOGGER.warning(
                         "Applied effect doesn't match requested effect. "
                         "Requested: %s, Applied: %s",
-                        self._pending_effect,
+                        self._requested_effect,
                         new_effect.attributes.name,
                     )
-                self._pending_effect = None
+                elif (
+                    self._requested_effect
+                    and new_effect.attributes.name == self._requested_effect
+                ):
+                    LOGGER.info(
+                        "Requested effect %s successfully applied",
+                        self._requested_effect,
+                    )
+                    self._requested_effect = None
+                    self._retry_count = 0
 
             LOGGER.debug(
                 "Updated state - Effect: %s, Is On: %s, Brightness: %s",
@@ -289,3 +339,19 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             LOGGER.warning("No data received from coordinator for %s", self.entity_id)
         self.async_write_ha_state()
         LOGGER.debug("State updated after coordinator update")
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Clean up resources when entity is removed."""
+        if self._refresh_task and not self._refresh_task.done():
+            self._refresh_task.cancel()
+            try:
+                # Wait for the task to be cancelled, but don't wait indefinitely
+                await asyncio.wait([self._refresh_task], timeout=1)
+            except asyncio.TimeoutError:
+                pass  # The task didn't finish cancelling in time, but that's okay
+        await super().async_will_remove_from_hass()
+
+    # For testing delayed refresh
+    def _cancel_refresh_task(self):
+        if self._refresh_task:
+            self._refresh_task.cancel()

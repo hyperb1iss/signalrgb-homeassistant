@@ -1,5 +1,7 @@
 """Pytest configuration file for the tests directory."""
 
+# pylint: disable=unused-argument
+
 import os
 import sys
 from pathlib import Path

@@ -2,6 +2,7 @@
 
 # pylint: disable=protected-access, redefined-outer-name
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -64,6 +65,7 @@ def mock_coordinator():
     """Mock DataUpdateCoordinator."""
     coordinator = MagicMock(spec=DataUpdateCoordinator)
     coordinator.data = None
+    coordinator.async_request_refresh = AsyncMock()
     return coordinator
 
 
@@ -103,17 +105,27 @@ class TestSignalRGBLight:
 
     async def test_turn_on(self, mock_light, mock_coordinator):
         """Test turning on the light."""
-        await mock_light.async_turn_on()
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await mock_light.async_turn_on()
+
         mock_light.hass.async_add_executor_job.assert_any_call(
             setattr, mock_light._client, "enabled", True
         )
         assert mock_light._is_on is True
         assert mock_light.async_write_ha_state.call_count == 1  # Once for turning on
+
+        # Run the delayed refresh
+        await mock_light._delayed_refresh()
         mock_coordinator.async_request_refresh.assert_called_once()
+
+        # Clean up
+        mock_light._cancel_refresh_task()
 
     async def test_turn_on_with_brightness(self, mock_light, mock_coordinator):
         """Test turning on the light with brightness."""
-        await mock_light.async_turn_on(**{ATTR_BRIGHTNESS: 128})
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await mock_light.async_turn_on(**{ATTR_BRIGHTNESS: 128})
+
         mock_light.hass.async_add_executor_job.assert_any_call(
             setattr, mock_light._client, "enabled", True
         )
@@ -125,7 +137,13 @@ class TestSignalRGBLight:
         assert (
             mock_light.async_write_ha_state.call_count == 2
         )  # Once for on, once for brightness
+
+        # Run the delayed refresh
+        await mock_light._delayed_refresh()
         mock_coordinator.async_request_refresh.assert_called_once()
+
+        # Clean up
+        mock_light._cancel_refresh_task()
 
     async def test_turn_on_with_effect(self, mock_light, mock_coordinator):
         """Test turning on the light with an effect."""
@@ -140,18 +158,25 @@ class TestSignalRGBLight:
             None,  # For apply_effect
         ]
 
-        await mock_light.async_turn_on(**{ATTR_EFFECT: mock_effect})
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await mock_light.async_turn_on(**{ATTR_EFFECT: mock_effect})
+
         assert mock_light._is_on is True
         assert mock_light._current_effect == mock_effect_obj
         assert (
             mock_light.async_write_ha_state.call_count == 2
         )  # Once for on, once for effect
+
+        # Run the delayed refresh
+        await mock_light._delayed_refresh()
         mock_coordinator.async_request_refresh.assert_called_once()
+
+        # Clean up
+        mock_light._cancel_refresh_task()
 
     async def test_turn_off(self, mock_light, mock_coordinator):
         """Test turning off the light."""
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            await mock_light.async_turn_off()
+        await mock_light.async_turn_off()
         mock_light.hass.async_add_executor_job.assert_called_with(
             setattr, mock_light._client, "enabled", False
         )
@@ -241,3 +266,18 @@ class TestSignalRGBLight:
         # Test when light is off
         mock_light._is_on = False
         assert mock_light.extra_state_attributes == {}
+
+    async def test_async_will_remove_from_hass(self, mock_light):
+        """Test the async_will_remove_from_hass method."""
+
+        # Create a real asyncio.Task for _refresh_task
+        async def mock_refresh():
+            await asyncio.sleep(10)  # Simulate a long-running task
+
+        mock_light._refresh_task = asyncio.create_task(mock_refresh())
+
+        # Call the method we're testing
+        await mock_light.async_will_remove_from_hass()
+
+        # Assert that the task was cancelled
+        assert mock_light._refresh_task.cancelled()
