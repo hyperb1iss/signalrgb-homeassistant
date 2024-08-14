@@ -35,6 +35,7 @@ pylint = "^3.2"
 pre-commit = "^3.7.0"
 ruff = "^0.5"
 semver = "^3.0.2"
+wcwidth = "^0.2.13"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
