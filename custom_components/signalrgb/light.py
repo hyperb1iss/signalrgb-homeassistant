@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import timedelta
 from typing import Any
 
@@ -113,6 +112,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._current_effect: Effect | None = None
         self._is_on: bool = False
         self._brightness: int = 0  # This is now 0-100
+        self._pending_effect: str | None = None
         LOGGER.debug("SignalRGBLight initialized: %s", self.entity_id)
 
     async def async_added_to_hass(self) -> None:
@@ -140,7 +140,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         """Return the current effect."""
         effect = self._current_effect.attributes.name if self._current_effect else None
         LOGGER.debug("Getting current effect for %s: %s", self.entity_id, effect)
-        return effect
+        return str(effect) if effect else None
 
     @property
     def effect_list(self) -> list[str]:
@@ -204,7 +204,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             LOGGER.debug("Applying effect: %s", effect)
             await self._apply_effect(effect)
 
-        LOGGER.debug("Requesting coordinator refresh")
+        # Schedule a delayed refresh
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -214,12 +214,10 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._is_on = False
         self.async_write_ha_state()
         LOGGER.debug("Light turned off, new state: %s", self._is_on)
-        await asyncio.sleep(0.5)  # Small delay to ensure the client has time to update
-        LOGGER.debug("Requesting coordinator refresh after turn off")
         await self.coordinator.async_request_refresh()
 
     async def _apply_effect(self, effect: str) -> None:
-        """Apply the specified effect."""
+        """Apply the specified effect and update state immediately."""
         LOGGER.debug("Applying effect: %s for %s", effect, self.entity_id)
         try:
             effect_obj: Effect = await self.hass.async_add_executor_job(
@@ -230,10 +228,13 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
                 self._client.apply_effect, effect_obj.id
             )
 
+            # Update state immediately
             self._current_effect = effect_obj
+            self._pending_effect = effect
             self.async_write_ha_state()
-            LOGGER.debug("Effect applied successfully")
+            LOGGER.debug("Effect applied and state updated immediately: %s", effect)
 
+            # await self.coordinator.async_request_refresh()
         except SignalRGBException as err:
             LOGGER.error("Failed to apply effect %s: %s", effect, err)
             raise HomeAssistantError(f"Failed to apply effect: {err}") from err
@@ -256,9 +257,26 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         data = self.coordinator.data
         if data:
             LOGGER.debug("Coordinator data: %s", data)
-            self._current_effect = data.get("current_effect")
+            new_effect = data.get("current_effect")
             self._is_on = data.get("is_on", False)
             self._brightness = data.get("brightness", 0)  # This is now 0-100
+
+            if new_effect and (
+                not self._current_effect or new_effect.id != self._current_effect.id
+            ):
+                self._current_effect = new_effect
+                if (
+                    self._pending_effect
+                    and new_effect.attributes.name != self._pending_effect
+                ):
+                    LOGGER.warning(
+                        "Applied effect doesn't match requested effect. "
+                        "Requested: %s, Applied: %s",
+                        self._pending_effect,
+                        new_effect.attributes.name,
+                    )
+                self._pending_effect = None
+
             LOGGER.debug(
                 "Updated state - Effect: %s, Is On: %s, Brightness: %s",
                 self._current_effect.attributes.name
