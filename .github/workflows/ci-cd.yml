@@ -111,19 +111,14 @@ jobs:
           pip install poetry
           poetry install
 
-      - name: Bump version and create a release
+      - name: Create release
         id: create_release
-        run: |
-          VERSION=$(poetry version --short)
-          git tag v$VERSION
-          git push --tags
-          echo "::set-output name=version::$VERSION"
-
-      - name: Create GitHub Release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.create_release.outputs.version }}
-          release_name: Release ${{ steps.create_release.outputs.version }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
 
