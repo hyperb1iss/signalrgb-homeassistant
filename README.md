@@ -30,6 +30,7 @@ Want more features? Vote for this [SignalRGB feature request](https://forum.sign
 - SignalRGB software installed and running on a Windows PC on your network
 - SignalRGB HTTP API enabled (default port: 16038)
 - SignalRGB [Pro subscription](https://signalrgb.com/pricing/) (required for API)
+- SignalRGB 2.3.108-BETA or newer is required
 
 ## 🛠️ Installation
 
