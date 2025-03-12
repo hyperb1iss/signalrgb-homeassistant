@@ -1,10 +1,11 @@
 """Support for SignalRGB lights."""
 
-# pylint: disable=too-many-instance-attributes, abstract-method
+# pylint: disable=abstract-method
 
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from datetime import timedelta
 from typing import Any
 
@@ -24,6 +25,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+
 from signalrgb.client import SignalRGBClient, SignalRGBException
 from signalrgb.model import Effect
 
@@ -43,7 +45,7 @@ async def async_setup_entry(
     LOGGER.debug("Setting up SignalRGB light for entry: %s", entry.entry_id)
     client: SignalRGBClient = hass.data[DOMAIN][entry.entry_id]
 
-    async def async_update_data():
+    async def async_update_data() -> dict[str, Any]:
         """Fetch data from API endpoint."""
         try:
             LOGGER.debug("Fetching current state from SignalRGB API")
@@ -116,7 +118,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._requested_effect: str | None = None
         self._retry_count: int = 0
         self._max_retries: int = 3
-        self._refresh_task: asyncio.Task | None = None
+        self._refresh_task: asyncio.Task[None] | None = None
         LOGGER.debug("SignalRGBLight initialized: %s", self.entity_id)
 
     async def async_added_to_hass(self) -> None:
@@ -213,7 +215,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
         self._schedule_delayed_refresh()
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **_kwargs: Any) -> None:
         """Instruct the light to turn off."""
         LOGGER.debug("Turning off %s", self.entity_id)
         await self.hass.async_add_executor_job(setattr, self._client, "enabled", False)
@@ -344,14 +346,12 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         """Clean up resources when entity is removed."""
         if self._refresh_task and not self._refresh_task.done():
             self._refresh_task.cancel()
-            try:
+            with suppress(TimeoutError):
                 # Wait for the task to be cancelled, but don't wait indefinitely
                 await asyncio.wait([self._refresh_task], timeout=1)
-            except asyncio.TimeoutError:
-                pass  # The task didn't finish cancelling in time, but that's okay
         await super().async_will_remove_from_hass()
 
     # For testing delayed refresh
-    def _cancel_refresh_task(self):
+    def _cancel_refresh_task(self) -> None:
         if self._refresh_task:
             self._refresh_task.cancel()

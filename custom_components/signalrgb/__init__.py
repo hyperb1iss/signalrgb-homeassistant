@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+
 from signalrgb.client import SignalRGBClient, SignalRGBException
 
 from .const import DOMAIN, LOGGER
@@ -13,7 +16,7 @@ from .const import DOMAIN, LOGGER
 PLATFORMS: list[Platform] = [Platform.LIGHT]
 
 
-async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, _config: dict[str, Any]) -> bool:
     """Set up the SignalRGB component."""
     hass.data.setdefault(DOMAIN, {})
     return True

@@ -111,7 +111,7 @@ disallow_incomplete_defs = false
 check_untyped_defs = false
 
 [tool.pylint]
-py-version = "3.12"
+py-version = "3.13"
 max-line-length = 88
 disable = [
     "W0212",  # protected-access
@@ -166,7 +166,7 @@ max-nested-blocks = 8
 [tool.ruff]
 # General settings
 line-length = 88
-target-version = "py312"
+target-version = "py313"
 src = ["custom_components", "tests"]
 extend-exclude = [".venv", "docs"]
 

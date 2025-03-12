@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Release management script for SignalRGB Home Assistant Integration."""
 
-# ruff: noqa: E501
+# ruff: noqa: E501,S603,S607,BLE001,T201
 # pylint: disable=broad-exception-caught, line-too-long
 
 import argparse
@@ -12,7 +12,6 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import List, Tuple
 
 from colorama import Style, init
 import semver
@@ -77,7 +76,7 @@ def print_warning(message: str) -> None:
     print_colored(f"⚠️  {message}", COLOR_WARNING)
 
 
-def generate_gradient(colors: List[Tuple[int, int, int]], steps: int) -> List[str]:
+def generate_gradient(colors: list[tuple[int, int, int]], steps: int) -> list[str]:
     """Generate a list of color codes for a smooth multi-color gradient."""
     gradient = []
     segments = len(colors) - 1
@@ -102,7 +101,7 @@ def strip_ansi(text: str) -> str:
     return ansi_escape.sub("", text)
 
 
-def apply_gradient(text: str, gradient: List[str], line_number: int) -> str:
+def apply_gradient(text: str, gradient: list[str], line_number: int) -> str:
     """Apply gradient colors diagonally to text."""
     return "".join(
         f"{gradient[(i + line_number) % len(gradient)]}{char}"
@@ -117,7 +116,7 @@ def center_text(text: str, width: int) -> str:
     return f"{' ' * padding}{text}{' ' * (width - padding - visible_length)}"
 
 
-def center_block(block: List[str], width: int) -> List[str]:
+def center_block(block: list[str], width: int) -> list[str]:
     """Center a block of text within a given width."""
     return [center_text(line, width) for line in block]
 
@@ -183,7 +182,7 @@ def get_current_version() -> str:
     """Get the current version from the manifest file."""
     try:
         manifest_path = os.path.join("custom_components", "signalrgb", "manifest.json")
-        with open(manifest_path, "r", encoding="utf-8") as file:
+        with open(manifest_path, encoding="utf-8") as file:
             manifest = json.load(file)
             version = manifest.get("version")
             if version is None or not isinstance(version, str):
@@ -201,26 +200,26 @@ def update_manifest(new_version: str) -> None:
     """Update the version in the manifest file."""
     manifest_path = os.path.join("custom_components", "signalrgb", "manifest.json")
     try:
-        with open(manifest_path, "r", encoding="utf-8") as file:
+        with open(manifest_path, encoding="utf-8") as file:
             manifest = json.load(file)
 
         manifest["version"] = new_version
         manifest["documentation"] = PROJECT_LINK
         manifest["issue_tracker"] = ISSUE_TRACKER
 
-        ordered_manifest = OrderedDict(
-            [("domain", manifest["domain"]), ("name", manifest["name"])]
-            + sorted(
-                [(k, v) for k, v in manifest.items() if k not in ["domain", "name"]]
-            )
+        # Create an ordered manifest with domain and name first, followed by other items
+        base_items = [("domain", manifest["domain"]), ("name", manifest["name"])]
+        other_items = sorted(
+            [(k, v) for k, v in manifest.items() if k not in ["domain", "name"]]
         )
+        ordered_manifest = OrderedDict([*base_items, *other_items])
 
         with open(manifest_path, "w", encoding="utf-8") as file:
             json.dump(ordered_manifest, file, indent=2)
             file.write("\n")  # Add a newline at the end of the file
         print_success(f"Updated version in manifest.json to {new_version}")
     except Exception as e:
-        print_error(f"Failed to update manifest: {str(e)}")
+        print_error(f"Failed to update manifest: {e!s}")
         sys.exit(1)
 
 
@@ -228,7 +227,7 @@ def update_pyproject_toml(new_version: str) -> None:
     """Update the version in pyproject.toml."""
     pyproject_path = "pyproject.toml"
     try:
-        with open(pyproject_path, "r", encoding="utf-8") as file:
+        with open(pyproject_path, encoding="utf-8") as file:
             lines = file.readlines()
 
         with open(pyproject_path, "w", encoding="utf-8") as file:
@@ -243,7 +242,7 @@ def update_pyproject_toml(new_version: str) -> None:
         print_error("pyproject.toml not found.")
         sys.exit(1)
     except Exception as e:
-        print_error(f"Failed to update pyproject.toml: {str(e)}")
+        print_error(f"Failed to update pyproject.toml: {e!s}")
         sys.exit(1)
 
 
@@ -255,7 +254,7 @@ def copy_integration(src_path: str, dest_path: str) -> None:
         shutil.copytree(src_path, dest_path)
         print_success(f"Copied integration from {src_path} to {dest_path}")
     except Exception as e:
-        print_error(f"Failed to copy integration: {str(e)}")
+        print_error(f"Failed to copy integration: {e!s}")
         sys.exit(1)
 
 
@@ -263,6 +262,8 @@ def commit_and_push(version: str) -> None:
     """Commit and push changes to the repository."""
     print_step("Committing and pushing changes")
     try:
+        # All the subprocess calls are safe but the linter doesn't know that
+        # We're only using fixed strings and the version which we validate
         subprocess.run(
             ["git", "add", "custom_components", "pyproject.toml"], check=True
         )
@@ -274,7 +275,7 @@ def commit_and_push(version: str) -> None:
         subprocess.run(["git", "push", "--tags"], check=True)
         print_success(f"Changes committed and pushed for version {version}")
     except subprocess.CalledProcessError as e:
-        print_error(f"Git operations failed: {str(e)}")
+        print_error(f"Git operations failed: {e!s}")
         sys.exit(1)
 
 

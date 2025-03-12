@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.exceptions import HomeAssistantError
+import voluptuous as vol
+
 from signalrgb.client import SignalRGBClient
 
 from .const import DEFAULT_PORT, DOMAIN
@@ -45,7 +46,7 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "invalid_host"
         except CannotConnectError:
             errors["base"] = "cannot_connect"
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except # noqa: BLE001
             errors["base"] = "unknown"
         else:
             await self.async_set_unique_id(
