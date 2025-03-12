@@ -5,17 +5,17 @@
 # pylint: disable=broad-exception-caught, line-too-long
 
 import argparse
+from collections import OrderedDict
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
-from collections import OrderedDict
 from typing import List, Tuple
 
-import semver
 from colorama import Style, init
+import semver
 from wcwidth import wcswidth
 
 # Initialize colorama for cross-platform colored output
@@ -322,6 +322,7 @@ def main() -> None:
     print_step(f"Starting {args.command} process")
 
     check_tool_installed("git")
+    check_tool_installed("uv")
 
     if args.command == "update-hass":
         update_hass()
