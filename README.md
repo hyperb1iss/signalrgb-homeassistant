@@ -1,37 +1,41 @@
 <div align="center">
 
-# 🌈✨ SignalRGB Home Assistant Integration
+# 🌌✨ SignalRGB Home Assistant Integration
 
-[<img src="https://img.shields.io/github/actions/workflow/status/hyperb1iss/signalrgb-homeassistant/ci-cd.yml?style=for-the-badge&logo=github&label=CI%2FCD" alt="CI/CD">](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
-[<img src="https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge">](https://github.com/custom-components/hacs)
-[<img src="https://img.shields.io/github/license/hyperb1iss/signalrgb-homeassistant?style=for-the-badge" alt="License">](https://opensource.org/licenses/Apache-2.0)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/hyperb1iss/signalrgb-homeassistant/ci-cd.yml?style=flat-square&logo=github&logoColor=white&label=CI%2FCD)](https://github.com/hyperb1iss/signalrgb-homeassistant/actions)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square&logo=homeassistant&logoColor=white)](https://github.com/hacs/integration)
+[![License](https://img.shields.io/github/license/hyperb1iss/signalrgb-homeassistant?style=flat-square&logo=apache&logoColor=white)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub Release](https://img.shields.io/github/v/release/hyperb1iss/signalrgb-homeassistant?style=flat-square&logo=github&logoColor=white)](https://github.com/hyperb1iss/signalrgb-homeassistant/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/hyperb1iss/signalrgb-homeassistant?style=flat-square&logo=github&logoColor=white)](https://github.com/hyperb1iss/signalrgb-homeassistant/stargazers)
 
 Transform your smart home lighting with the power of SignalRGB, now integrated directly into Home Assistant!
 
-[Features](#-features) • [Requirements](#-requirements) • [Installation](#%EF%B8%8F-installation) • [Configuration](#%EF%B8%8F-configuration) • [Usage](#-usage) • [Development](#-development) • [Contributing](#-contributing) • [Support](#-support)
+[Features](#-features) • [Requirements](#-requirements) • [Installation](#-installation) • [Configuration](#%EF%B8%8F-configuration) • [Usage](#-usage) • [Development](#-development) • [Contributing](#-contributing) • [Support](#-support)
 
 </div>
 
-## 🌟 Features
+## 🔮 Features
 
-- 💡 Control SignalRGB as a light entity in Home Assistant
-- 🔌 Seamless on/off control
-- 🎨 Apply a wide range of lighting effects
+- 🌐 Control SignalRGB as a light entity in Home Assistant
+- ⚡ Seamless on/off control
+- 🎭 Apply a wide range of lighting effects
 - 🔆 Adjust brightness of your entire SignalRGB setup
 - 📊 View current effect and available effects list
-- 🔄 Automatic effect image and color extraction
-- 🎛️ Effect parameter control (coming soon!)
+- 🧬 Automatic effect image and color extraction
+- 🧩 Select and apply effect presets
+- 📐 Change layouts with the layout selector
+- 🔄 Navigate effects with next/previous/random buttons
 
 Want more features? Vote for this [SignalRGB feature request](https://forum.signalrgb.com/t/rest-api-features/2635)!
 
-## 📋 Requirements
+## 📡 Requirements
 
-- Home Assistant 2024.2.0 or newer
+- Home Assistant 2025.3.0 or newer
 - SignalRGB software installed and running on a Windows PC on your network
 - SignalRGB HTTP API enabled (default port: 16038)
 - SignalRGB [Pro subscription](https://signalrgb.com/pricing/) (required for API)
 
-## 🛠️ Installation
+## 🔧 Installation
 
 ### HACS Installation (Recommended)
 
@@ -43,6 +47,7 @@ Want more features? Vote for this [SignalRGB feature request](https://forum.sign
 6. Restart Home Assistant.
 
 > **Note**: This component isn't in the official HACS repository yet. You can add it as a custom repository:
+>
 > 1. Go to HACS
 > 2. Click on the three dots in the top right corner
 > 3. Select "Custom repositories"
@@ -78,13 +83,21 @@ After installation, add the SignalRGB integration through the Home Assistant UI:
 
 ## 🚀 Usage
 
-Once configured, SignalRGB will appear as a light entity in Home Assistant. You can:
+Once configured, SignalRGB will appear as several entities in Home Assistant:
+
+- 💠 **Light Entity**: Control power, brightness, and effects
+- 📐 **Layout Selector**: Change between different layouts
+- ⚙️ **Effect Preset Selector**: Apply presets for the current effect
+- ⏯️ **Button Entities**: Navigate through effects (next, previous, random)
+
+### 💠 Light Entity
+
+The main light entity allows you to:
 
 - 💡 Turn it on/off
 - 🎨 Select different effects from the effect list
 - 🔆 Adjust the brightness of your entire SignalRGB setup
 - 🏠 Include it in automations, scripts, and scenes
-- 👁️ View effect details and parameters
 
 Example automation:
 
@@ -94,7 +107,7 @@ automation:
     trigger:
       platform: state
       entity_id: binary_sensor.gaming_pc_status
-      to: 'on'
+      to: "on"
     action:
       - service: light.turn_on
         target:
@@ -104,14 +117,126 @@ automation:
           brightness: 255
 ```
 
-You can also control the brightness using slider controls in the Home Assistant UI or by calling the `light.turn_on` service with a brightness value:
+### 📐 Layout Selector
+
+The layout selector allows you to switch between different device layouts in SignalRGB:
 
 ```yaml
-service: light.turn_on
+# Example service call to change layout
+service: select.select_option
 target:
-  entity_id: light.signalrgb
+  entity_id: select.signalrgb_layout
 data:
-  brightness: 128  # Values range from 0 (off) to 255 (full brightness)
+  option: "My Gaming Setup"
+```
+
+Example automation to switch layouts based on time of day:
+
+```yaml
+automation:
+  - alias: "Evening Gaming Setup"
+    trigger:
+      platform: time
+      at: "20:00:00"
+    action:
+      - service: select.select_option
+        target:
+          entity_id: select.signalrgb_layout
+        data:
+          option: "Gaming Setup"
+      - service: light.turn_on
+        target:
+          entity_id: light.signalrgb
+        data:
+          effect: "Ambient Waves"
+          brightness: 200
+```
+
+### ⚙️ Effect Preset Selector
+
+Apply different presets for the current effect:
+
+```yaml
+# Example service call to apply a preset
+service: select.select_option
+target:
+  entity_id: select.signalrgb_effect_preset
+data:
+  option: "Rainbow"
+```
+
+Example script to set up a movie night ambiance:
+
+```yaml
+script:
+  movie_night:
+    alias: "Movie Night Lighting"
+    sequence:
+      - service: light.turn_on
+        target:
+          entity_id: light.signalrgb
+        data:
+          effect: "Audio Visualizer"
+      - delay: 00:00:02 # Wait for effect to load
+      - service: select.select_option
+        target:
+          entity_id: select.signalrgb_effect_preset
+        data:
+          option: "Subtle Pulse"
+      - service: light.turn_on
+        target:
+          entity_id: light.signalrgb
+        data:
+          brightness: 128
+```
+
+### ⏯️ Effect Navigation Buttons
+
+Use the button entities to navigate through effects:
+
+```yaml
+# Example service call to go to the next effect
+service: button.press
+target:
+  entity_id: button.signalrgb_next_effect
+```
+
+```yaml
+# Example service call to go to a random effect
+service: button.press
+target:
+  entity_id: button.signalrgb_random_effect
+```
+
+Example automation to cycle through effects every hour:
+
+```yaml
+automation:
+  - alias: "Hourly Effect Change"
+    trigger:
+      platform: time_pattern
+      hours: "*"
+    condition:
+      - condition: state
+        entity_id: light.signalrgb
+        state: "on"
+    action:
+      - service: button.press
+        target:
+          entity_id: button.signalrgb_next_effect
+```
+
+Example dashboard button card configuration:
+
+```yaml
+type: button
+name: Next Effect
+icon: mdi:skip-next
+tap_action:
+  action: call-service
+  service: button.press
+  target:
+    entity_id: button.signalrgb_next_effect
 ```
 
 ## 🎨 Enhance Your UI with hyper-light-card
@@ -132,11 +257,14 @@ To install hyper-light-card:
 
 Experience the perfect blend of functionality and aesthetics with hyper-light-card and SignalRGB!
 
-## 🛠 Development
+## 🧠 Development
 
-This project uses Poetry for dependency management and packaging. To set up the development environment:
+This project uses UV for dependency management and packaging. To set up the development environment:
 
-1. Install [Poetry](https://python-poetry.org/docs/#installation)
+1. Install [UV](https://github.com/astral-sh/uv)
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://astral.sh/uv/install.sh | sh
+   ```
 2. Clone the repository:
    ```bash
    git clone https://github.com/hyperb1iss/signalrgb-homeassistant.git
@@ -145,27 +273,26 @@ This project uses Poetry for dependency management and packaging. To set up the 
    ```bash
    cd signalrgb-homeassistant
    ```
-4. Install dependencies:
+4. Create a virtual environment and install dependencies:
    ```bash
-   poetry install
+   uv venv .venv
+   . .venv/bin/activate
+   uv sync
    ```
-5. Activate the virtual environment:
-   ```bash
-   poetry shell
-   ```
-6. Install pre-commit hooks:
+5. Install pre-commit hooks:
    ```bash
    pre-commit install
    ```
 
 ### Useful Commands
 
-- Run tests: `make test`
-- Lint code: `make lint`
-- Format code: `make format`
-- Run all checks: `make check`
+- Run tests: `python -m pytest`
+- Run tests with coverage: `python -m pytest --cov=custom_components.signalrgb`
+- Lint code: `ruff check .`
+- Format code: `ruff format .`
+- Type check: `mypy custom_components/signalrgb/`
 
-## 🤝 Contributing
+## 🧪 Contributing
 
 We welcome contributions to the SignalRGB Home Assistant Integration! Here's how you can help:
 
@@ -177,7 +304,7 @@ We welcome contributions to the SignalRGB Home Assistant Integration! Here's how
 
 Please ensure your code adheres to our style guidelines and passes all tests.
 
-## 🆘 Support
+## 🔍 Support
 
 - 📚 For documentation and general questions, check out our [Wiki](https://github.com/hyperb1iss/signalrgb-homeassistant/wiki).
 - 🐛 Found a bug? [Open an issue](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new?assignees=&labels=bug&template=bug_report.md&title=).
