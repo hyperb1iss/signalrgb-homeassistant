@@ -9,9 +9,12 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
 
-from signalrgb.client import SignalRGBClient
+from signalrgb.client import (
+    ConnectionError as SignalRGBConnectionError,
+    SignalRGBException,
+)
 
-from .const import DEFAULT_PORT, DOMAIN
+from .const import DEFAULT_PORT, DOMAIN, LOGGER
 
 DATA_SCHEMA = vol.Schema(
     {
@@ -38,15 +41,29 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         try:
+            from signalrgb.client import SignalRGBClient
+
             client = SignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
+            LOGGER.debug(
+                "Testing connection to SignalRGB at %s:%s",
+                user_input[CONF_HOST],
+                user_input[CONF_PORT],
+            )
+            # Test the connection by getting the current effect
             await self.hass.async_add_executor_job(client.get_current_effect)
-        except InvalidAuthError:
-            errors["base"] = "invalid_auth"
-        except InvalidHostError:
-            errors["base"] = "invalid_host"
-        except CannotConnectError:
+            LOGGER.debug("Successfully connected to SignalRGB")
+        except SignalRGBConnectionError:
+            LOGGER.error(
+                "Failed to connect to SignalRGB at %s:%s",
+                user_input[CONF_HOST],
+                user_input[CONF_PORT],
+            )
             errors["base"] = "cannot_connect"
-        except Exception:  # pylint: disable=broad-except # noqa: BLE001
+        except SignalRGBException as err:
+            LOGGER.error("SignalRGB API error: %s", err)
+            errors["base"] = "unknown"
+        except Exception as err:  # pylint: disable=broad-except # noqa: BLE001
+            LOGGER.exception("Unexpected error while setting up SignalRGB: %s", err)
             errors["base"] = "unknown"
         else:
             await self.async_set_unique_id(

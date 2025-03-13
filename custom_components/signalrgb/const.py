@@ -2,6 +2,8 @@
 
 from logging import getLogger
 
+from homeassistant.const import Platform
+
 DOMAIN = "signalrgb"
 
 LOGGER = getLogger(__package__)
@@ -19,3 +21,6 @@ MODEL = "SignalRGB"
 
 # Icon
 ICON = "mdi:led-strip-variant"
+
+# Platforms
+PLATFORMS = [Platform.LIGHT, Platform.SELECT, Platform.BUTTON]

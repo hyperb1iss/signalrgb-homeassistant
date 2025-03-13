@@ -5,15 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from signalrgb.client import SignalRGBClient, SignalRGBException
 
-from .const import DOMAIN, LOGGER
-
-PLATFORMS: list[Platform] = [Platform.LIGHT]
+from .const import DOMAIN, LOGGER, PLATFORMS
 
 
 async def async_setup(hass: HomeAssistant, _config: dict[str, Any]) -> bool:
@@ -40,7 +38,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         raise ConfigEntryNotReady from err
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
+    # Store client in hass.data - coordinators will be added by platform setup
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        "client": client,
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

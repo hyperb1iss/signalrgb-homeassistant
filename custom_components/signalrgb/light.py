@@ -1,6 +1,6 @@
 """Support for SignalRGB lights."""
 
-# pylint: disable=abstract-method
+# pylint: disable=abstract-method, duplicate-code
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up SignalRGB light based on a config entry."""
     LOGGER.debug("Setting up SignalRGB light for entry: %s", entry.entry_id)
-    client: SignalRGBClient = hass.data[DOMAIN][entry.entry_id]
+    client: SignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from API endpoint."""
@@ -75,9 +75,13 @@ async def async_setup_entry(
         name="signalrgb_light",
         update_method=async_update_data,
         update_interval=timedelta(seconds=UPDATE_INTERVAL),
+        config_entry=entry,
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    # Store coordinator in hass.data so buttons can access it
+    hass.data[DOMAIN][entry.entry_id]["coordinator"] = coordinator
+
+    await coordinator.async_refresh()
 
     light = SignalRGBLight(coordinator, client, entry)
     LOGGER.info("Adding SignalRGB light entity: %s", light.entity_id)
@@ -232,8 +236,10 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
                 self._client.get_effect_by_name, effect
             )
             LOGGER.debug("Effect object retrieved: %s", effect_obj.id)
+
+            # Use apply_effect_by_name which is more robust
             await self.hass.async_add_executor_job(
-                self._client.apply_effect, effect_obj.id
+                self._client.apply_effect_by_name, effect
             )
 
             # Update state immediately
@@ -286,9 +292,11 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         """Update the list of available effects."""
         LOGGER.debug("Updating effect list for %s", self.entity_id)
         try:
+            # Use the refresh_effects method to ensure we get the latest data
+            await self.hass.async_add_executor_job(self._client.refresh_effects)
             effects = await self.hass.async_add_executor_job(self._client.get_effects)
             self._effect_list = [effect.attributes.name for effect in effects]
-            LOGGER.debug("Effect list updated: %s", self._effect_list)
+            LOGGER.debug("Effect list updated with %s effects", len(self._effect_list))
         except SignalRGBException as err:
             LOGGER.error("Failed to fetch effect list: %s", err)
             self._effect_list = []

@@ -6,12 +6,8 @@ from homeassistant import config_entries, data_entry_flow
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.signalrgb.config_flow import (
-    CannotConnectError,
-    InvalidAuthError,
-    InvalidHostError,
-)
 from custom_components.signalrgb.const import DOMAIN
+from signalrgb.client import ConnectionError, SignalRGBException
 
 
 # This fixture bypasses the actual setup of the integration
@@ -40,7 +36,7 @@ async def test_form(hass):
     assert result["errors"] == {}
 
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
+        "signalrgb.client.SignalRGBClient.get_current_effect",
         return_value=True,
     ):
         result2 = await hass.config_entries.flow.async_configure(
@@ -54,25 +50,6 @@ async def test_form(hass):
     assert result2["data"] == MOCK_CONFIG
 
 
-async def test_form_invalid_auth(hass):
-    """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=InvalidAuthError,
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
-    assert result2["errors"] == {"base": "invalid_auth"}
-
-
 async def test_form_cannot_connect(hass):
     """Test we handle cannot connect error."""
     result = await hass.config_entries.flow.async_init(
@@ -80,8 +57,8 @@ async def test_form_cannot_connect(hass):
     )
 
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=CannotConnectError,
+        "signalrgb.client.SignalRGBClient.get_current_effect",
+        side_effect=ConnectionError("Cannot connect"),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -92,15 +69,15 @@ async def test_form_cannot_connect(hass):
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_invalid_host(hass):
-    """Test we handle invalid host error."""
+async def test_form_exception(hass):
+    """Test we handle general API exceptions."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
-        side_effect=InvalidHostError,
+        "signalrgb.client.SignalRGBClient.get_current_effect",
+        side_effect=SignalRGBException("API Error"),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -108,7 +85,7 @@ async def test_form_invalid_host(hass):
         )
 
     assert result2["type"] == data_entry_flow.FlowResultType.FORM
-    assert result2["errors"] == {"base": "invalid_host"}
+    assert result2["errors"] == {"base": "unknown"}
 
 
 async def test_form_unexpected_exception(hass):
@@ -118,7 +95,7 @@ async def test_form_unexpected_exception(hass):
     )
 
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
+        "signalrgb.client.SignalRGBClient.get_current_effect",
         side_effect=Exception,
     ):
         result2 = await hass.config_entries.flow.async_configure(
@@ -144,7 +121,7 @@ async def test_flow_entry_already_exists(hass):
     )
 
     with patch(
-        "custom_components.signalrgb.config_flow.SignalRGBClient.get_current_effect",
+        "signalrgb.client.SignalRGBClient.get_current_effect",
         return_value=True,
     ):
         result2 = await hass.config_entries.flow.async_configure(

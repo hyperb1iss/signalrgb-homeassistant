@@ -11,8 +11,6 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 import pytest
 
 from custom_components.signalrgb.const import (
@@ -21,63 +19,50 @@ from custom_components.signalrgb.const import (
 )
 from custom_components.signalrgb.light import SignalRGBLight
 
-PLATFORMS = ["light"]
+# Import fixtures from conftest.py (they're auto-loaded by pytest)
+
+# Test data
+TEST_HOST = "192.168.1.100"
+TEST_PORT = DEFAULT_PORT
+TEST_CONFIG = {
+    "host": TEST_HOST,
+    "port": TEST_PORT,
+}
 
 
-@pytest.fixture
-def mock_signalrgb_client():
-    """Mock SignalRGB client."""
-    with patch("custom_components.signalrgb.SignalRGBClient") as mock_client:
-        yield mock_client
+async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
+    """Test setting up the entry."""
+    from custom_components.signalrgb.light import async_setup_entry
 
+    # Prepare hass.data for the entry
+    mock_hass.data[DOMAIN] = {
+        mock_config_entry.entry_id: {"client": mock_signalrgb_client}
+    }
 
-@pytest.fixture
-def mock_config_entry():
-    """Mock configuration entry."""
-    return MagicMock(
-        version=1,
-        domain=DOMAIN,
-        title="SignalRGB",
-        data={
-            "host": "192.168.1.100",
-            "port": DEFAULT_PORT,
-        },
-        source="user",
-        entry_id="test",
-        unique_id="192.168.1.100:16038",
-    )
+    # Mock the get_current_effect and properties method results for update
+    mock_effect = MagicMock()
+    mock_effect.attributes.name = "Test Effect"
+    mock_hass.async_add_executor_job.side_effect = [
+        mock_effect,  # For get_current_effect
+        True,  # For enabled check
+        75,  # For brightness check
+    ]
 
+    # Call async_setup_entry and wait for the coordinator's first refresh
+    entities = []
+    def async_add_entities(added_entities, **kwargs):
+        return entities.extend(
+            added_entities
+        )
 
-@pytest.fixture
-def mock_hass():
-    """Mock Home Assistant instance."""
-    hass = MagicMock(spec=HomeAssistant)
-    hass.data = {}
-    hass.async_add_executor_job = AsyncMock()
-    hass.config_entries = MagicMock()
-    hass.config_entries.async_forward_entry_setups = AsyncMock()
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    return hass
+    await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
+    # Check that the entity was added
+    assert len(entities) == 1
+    assert isinstance(entities[0], SignalRGBLight)
 
-@pytest.fixture
-def mock_coordinator():
-    """Mock DataUpdateCoordinator."""
-    coordinator = MagicMock(spec=DataUpdateCoordinator)
-    coordinator.data = None
-    coordinator.async_request_refresh = AsyncMock()
-    return coordinator
-
-
-@pytest.fixture
-def mock_light(mock_hass, mock_signalrgb_client, mock_config_entry, mock_coordinator):
-    """Mock SignalRGBLight instance."""
-    client = mock_signalrgb_client.return_value
-    light = SignalRGBLight(mock_coordinator, client, mock_config_entry)
-    light.hass = mock_hass
-    light.entity_id = "light.signalrgb"
-    light.async_write_ha_state = MagicMock()
-    return light
+    # Verify the coordinator was stored in hass.data
+    assert "coordinator" in mock_hass.data[DOMAIN][mock_config_entry.entry_id]
 
 
 class TestSignalRGBLight:
@@ -155,7 +140,7 @@ class TestSignalRGBLight:
         mock_light.hass.async_add_executor_job.side_effect = [
             True,  # For setting enabled
             mock_effect_obj,  # For get_effect_by_name
-            None,  # For apply_effect
+            None,  # For apply_effect_by_name
         ]
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -190,9 +175,9 @@ class TestSignalRGBLight:
         mock_effect1.attributes.name = "Effect 1"
         mock_effect2 = MagicMock()
         mock_effect2.attributes.name = "Effect 2"
-        mock_light.hass.async_add_executor_job.return_value = [
-            mock_effect1,
-            mock_effect2,
+        mock_light.hass.async_add_executor_job.side_effect = [
+            None,  # For refresh_effects
+            [mock_effect1, mock_effect2],  # For get_effects
         ]
 
         await mock_light.async_update_effect_list()
@@ -207,7 +192,7 @@ class TestSignalRGBLight:
 
         mock_light.hass.async_add_executor_job.side_effect = [
             mock_effect_obj,  # For get_effect_by_name
-            None,  # For apply_effect
+            None,  # For apply_effect_by_name
         ]
 
         await mock_light._apply_effect(mock_effect)
@@ -281,3 +266,13 @@ class TestSignalRGBLight:
 
         # Assert that the task was cancelled
         assert mock_light._refresh_task.cancelled()
+
+
+@pytest.fixture
+def mock_light(mock_hass, mock_signalrgb_client, mock_config_entry, mock_coordinator):
+    """Mock SignalRGBLight instance."""
+    light = SignalRGBLight(mock_coordinator, mock_signalrgb_client, mock_config_entry)
+    light.hass = mock_hass
+    light.entity_id = "light.signalrgb"
+    light.async_write_ha_state = MagicMock()
+    return light

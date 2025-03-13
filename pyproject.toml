@@ -51,6 +51,7 @@ packages = ["custom_components"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 norecursedirs = [".git", "venv", ".venv", "dist", "build"]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["custom_components.signalrgb"]
