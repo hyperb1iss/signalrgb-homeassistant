@@ -7,7 +7,10 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.signalrgb.const import DOMAIN
-from signalrgb.client import ConnectionError, SignalRGBException
+from signalrgb.client import (
+    ConnectionError as SignalRGBConnectionError,
+    SignalRGBException,
+)
 
 
 # This fixture bypasses the actual setup of the integration
@@ -58,7 +61,7 @@ async def test_form_cannot_connect(hass):
 
     with patch(
         "signalrgb.client.SignalRGBClient.get_current_effect",
-        side_effect=ConnectionError("Cannot connect"),
+        side_effect=SignalRGBConnectionError("Cannot connect"),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],

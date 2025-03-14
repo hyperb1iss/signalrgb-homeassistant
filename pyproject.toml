@@ -115,8 +115,8 @@ check_untyped_defs = false
 py-version = "3.13"
 max-line-length = 88
 disable = [
-    "W0212",  # protected-access
-    "W0621",  # redefined-outer-name
+    "W0212", # protected-access
+    "W0621", # redefined-outer-name
     # Covered by Ruff
     "bad-indentation",
     "line-too-long",
@@ -141,6 +141,7 @@ disable = [
     "wrong-import-position",
     "import-outside-toplevel",
     "too-many-positional-arguments",
+    "wrong-import-order",
     "fixme",
 ]
 
@@ -210,8 +211,8 @@ select = [
 # Rules to ignore
 ignore = [
     # Core ignores
-    "E501",    # Line too long - handled by formatter
-    
+    "E501", # Line too long - handled by formatter
+
     # Complexity - handled by pylint
     "C901",    # Function is too complex
     "PLR0911", # Too many return statements

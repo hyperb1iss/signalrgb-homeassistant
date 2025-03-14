@@ -50,10 +50,9 @@ async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_cl
 
     # Call async_setup_entry and wait for the coordinator's first refresh
     entities = []
+
     def async_add_entities(added_entities, **kwargs):
-        return entities.extend(
-            added_entities
-        )
+        return entities.extend(added_entities)
 
     await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 

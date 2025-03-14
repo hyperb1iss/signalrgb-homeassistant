@@ -1,6 +1,6 @@
 """Unit tests for the SignalRGB button components."""
 
-# pylint: disable=protected-access, redefined-outer-name
+# pylint: disable=redefined-outer-name
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -29,6 +29,7 @@ async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_cl
 
     # Call async_setup_entry
     entities = []
+
     def async_add_entities(added_entities):
         return entities.extend(added_entities)
 
