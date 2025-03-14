@@ -8,10 +8,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+import homeassistant.helpers.config_validation as cv
 
 from signalrgb.client import SignalRGBClient, SignalRGBException
 
 from .const import DOMAIN, LOGGER, PLATFORMS
+
+# This integration only supports configuration via config entries
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, _config: dict[str, Any]) -> bool:
