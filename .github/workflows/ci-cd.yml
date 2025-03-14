@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -29,20 +29,20 @@ jobs:
           version: "0.6.3"
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: make install
 
-      - name: Run Ruff
-        run: uv run ruff check .
+      - name: Run lint
+        run: make lint
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -52,17 +52,17 @@ jobs:
           version: "0.6.3"
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: make install
 
       - name: Run tests with pytest
-        run: uv run pytest --cov=custom_components/signalrgb --cov-report=xml
+        run: make test
 
   validate:
     name: Validate Project
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run hassfest
         uses: home-assistant/actions/hassfest@master
@@ -78,12 +78,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -91,12 +91,17 @@ jobs:
           version: "0.6.3"
 
       - name: Install dependencies
-        run: |
-          uv pip install --system -e ".[dev]"
-          uv pip install build
+        run: uv sync
 
       - name: Build the package
-        run: uv run python -m build
+        run: uv build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
 
   release:
     name: Create Release
@@ -105,22 +110,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "0.6.3"
-
-      - name: Install dependencies
-        run: |
-          uv pip install --system -e ".[dev]"
-          uv pip install build twine
+          name: dist
+          path: dist
 
       - name: Create release
         id: create_release
@@ -132,9 +128,3 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: dist/
