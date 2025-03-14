@@ -1,26 +1,24 @@
 .PHONY: install test lint format check clean
 
 install:
-	poetry install
+	uv sync
 
 test:
-	poetry run pytest
+	uv run pytest
 
 lint:
-	poetry run pylint custom_components
-	poetry run mypy custom_components
-	poetry run ruff check .
+	uv run pylint custom_components tests
+	uv run mypy custom_components tests
+	uv run ruff check
 
 format:
-	poetry run black .
-	poetry run isort .
+	uv run ruff format
 
 check:
-	poetry run black --check .
-	poetry run isort --check .
-	poetry run pylint custom_components
-	poetry run mypy custom_components
-	poetry run ruff check .
+	uv run ruff format --check
+	uv run pylint custom_components
+	uv run mypy custom_components
+	uv run ruff check
 
 update:
 	@./scripts/release.py update-hass
