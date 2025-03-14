@@ -93,12 +93,23 @@ async def async_setup_entry(
             LOGGER.debug("Fetching current effect from SignalRGB API")
             current_effect = await client.get_current_effect()
             effects = await client.get_effects()
+            LOGGER.debug(
+                "Current effect: %s",
+                current_effect.attributes.name if current_effect else "None",
+            )
 
             # If we have a current effect, also get its presets
             presets = []
             if current_effect:
                 try:
+                    LOGGER.debug("Fetching presets for effect: %s", current_effect.id)
                     presets = await client.get_effect_presets(current_effect.id)
+                    LOGGER.debug(
+                        "Found %s presets for effect %s: %s",
+                        len(presets),
+                        current_effect.attributes.name,
+                        [preset.id for preset in presets],
+                    )
                 except SignalRGBException as preset_err:
                     LOGGER.warning(
                         "Error fetching presets for effect %s: %s",
@@ -141,16 +152,14 @@ async def async_setup_entry(
         )
     )
 
-    # Only add preset selector if presets are available
-    presets = effect_coordinator.data.get("presets", [])
-    if presets:
-        entities.append(
-            SignalRGBPresetSelect(
-                effect_coordinator,
-                client,
-                entry,
-            )
+    # Always add preset selector, regardless of whether presets are available
+    entities.append(
+        SignalRGBPresetSelect(
+            effect_coordinator,
+            client,
+            entry,
         )
+    )
 
     LOGGER.info(
         "Adding %s SignalRGB select entities: %s",
@@ -240,7 +249,34 @@ class SignalRGBLayoutSelect(SignalRGBBaseSelect):
             await self._client.set_current_layout(layout_id)
             self._current_layout_id = layout_id
             self.async_write_ha_state()
-            await self.coordinator.async_request_refresh()
+
+            # Fast refresh strategy
+            entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
+
+            # Very short delay to allow SignalRGB to process the change
+            await asyncio.sleep(0.2)
+
+            # Directly fetch the current layout from the API
+            try:
+                LOGGER.debug("Directly fetching current layout after selection")
+                current_layout = await self._client.get_current_layout()
+
+                # Update our coordinator data directly
+                if self.coordinator.data:
+                    self.coordinator.data["current_layout"] = current_layout
+                    # Force an update to all entities using this coordinator
+                    self.coordinator.async_set_updated_data(self.coordinator.data)
+
+                # Also refresh the light coordinator to update any effect changes
+                if "coordinator" in entry_data:
+                    LOGGER.debug("Refreshing light coordinator after layout change")
+                    await entry_data["coordinator"].async_request_refresh()
+
+            except SignalRGBException as refresh_err:
+                LOGGER.warning("Error refreshing layout state: %s", refresh_err)
+                # Fall back to regular coordinator refresh
+                await self.coordinator.async_request_refresh()
+
         except SignalRGBException as err:
             LOGGER.error("Failed to select layout %s: %s", option, err)
             raise HomeAssistantError(f"Failed to select layout: {err}") from err
@@ -288,7 +324,7 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        # Only available if we have an effect with presets
+        # Only available if we have an effect and presets
         return (
             self.coordinator.last_update_success
             and self._current_effect is not None
@@ -317,7 +353,34 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
             await self._client.apply_effect_preset(self._current_effect.id, option)
             self._current_preset = option
             self.async_write_ha_state()
-            await self.coordinator.async_request_refresh()
+
+            # Fast refresh strategy
+            entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
+
+            # Very short delay to allow SignalRGB to process the change
+            await asyncio.sleep(0.2)
+
+            # Directly fetch the current effect from the API
+            try:
+                LOGGER.debug("Directly fetching current effect after preset selection")
+                current_effect = await self._client.get_current_effect()
+
+                # Update our coordinator data directly
+                if self.coordinator.data:
+                    self.coordinator.data["current_effect"] = current_effect
+                    # Force an update to all entities using this coordinator
+                    self.coordinator.async_set_updated_data(self.coordinator.data)
+
+                # Also refresh the light coordinator to update the light entity
+                if "coordinator" in entry_data:
+                    LOGGER.debug("Refreshing light coordinator after preset change")
+                    await entry_data["coordinator"].async_request_refresh()
+
+            except SignalRGBException as refresh_err:
+                LOGGER.warning("Error refreshing preset state: %s", refresh_err)
+                # Fall back to regular coordinator refresh
+                await self.coordinator.async_request_refresh()
+
         except SignalRGBException as err:
             LOGGER.error("Failed to apply preset %s: %s", option, err)
             raise HomeAssistantError(f"Failed to apply preset: {err}") from err
@@ -326,15 +389,34 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
         """Update entity data from the coordinator."""
         data = self.coordinator.data
         if data and "current_effect" in data and "presets" in data:
-            self._current_effect = data["current_effect"]
+            # Update current effect - this may have changed
+            new_effect = data["current_effect"]
+            effect_changed = not self._current_effect or (
+                new_effect
+                and self._current_effect
+                and new_effect.id != self._current_effect.id
+            )
+
+            self._current_effect = new_effect
             presets = data["presets"]
 
-            # Update presets list
-            self._presets = [preset.id for preset in presets]
+            # Update presets list - make sure to get the preset IDs correctly
+            self._presets = [preset.id for preset in presets] if presets else []
+            LOGGER.debug(
+                "Updated presets for effect %s: %s",
+                new_effect.attributes.name if new_effect else "None",
+                self._presets,
+            )
 
-            # We don't know which preset is currently active, so set to None
-            # Would need API support to track the active preset
-            self._current_preset = None
+            # Reset current preset when effect changes or if it's not set
+            if effect_changed or self._current_preset is None:
+                LOGGER.debug(
+                    "Effect changed or preset not set, setting to first preset"
+                )
+                if self._presets:
+                    self._current_preset = self._presets[0]
+                else:
+                    self._current_preset = None
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

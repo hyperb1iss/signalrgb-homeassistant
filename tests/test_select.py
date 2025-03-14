@@ -2,7 +2,7 @@
 
 # pylint: disable=protected-access
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.exceptions import HomeAssistantError
 import pytest
@@ -125,6 +125,27 @@ class TestSignalRGBLayoutSelect:
             "layout2": mock_layout2,
         }
 
+        # Set up the coordinator and hass data for the fast refresh
+        mock_layout_select.coordinator.data = {"layouts": [], "current_layout": None}
+        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
+        mock_layout_select.coordinator.async_set_updated_data = MagicMock()
+
+        # Mock the client's get methods that are called during direct refresh
+        mock_layout_select._client.get_current_layout = AsyncMock(
+            return_value=mock_layout2
+        )
+
+        # Set up mock coordinator in hass.data
+        mock_coordinator = MagicMock()
+        mock_coordinator.async_request_refresh = AsyncMock()
+
+        mock_layout_select.hass.data[DOMAIN] = {
+            mock_layout_select._config_entry.entry_id: {
+                "client": mock_layout_select._client,
+                "coordinator": mock_coordinator,
+            }
+        }
+
         # Test selecting a valid option
         await mock_layout_select.async_select_option("layout2")
 
@@ -133,7 +154,12 @@ class TestSignalRGBLayoutSelect:
 
         assert mock_layout_select._current_layout_id == "layout2"
         mock_layout_select.async_write_ha_state.assert_called_once()
-        mock_layout_select.coordinator.async_request_refresh.assert_called_once()
+
+        # Verify the direct state fetching was called
+        mock_layout_select._client.get_current_layout.assert_called_once()
+
+        # Verify coordinator was updated directly
+        mock_layout_select.coordinator.async_set_updated_data.assert_called_once()
 
         # Test selecting an invalid option
         with pytest.raises(HomeAssistantError):
@@ -186,14 +212,38 @@ class TestSignalRGBPresetSelect:
         assert mock_preset_select.available is True
         assert mock_preset_select.options == ["preset1", "preset2"]
         assert (
-            mock_preset_select.current_option is None
-        )  # Current preset is not tracked by API
+            mock_preset_select.current_option == "preset1"
+        )  # First preset is automatically selected
 
     async def test_preset_select_option(self, mock_preset_select, mock_preset_data):
         """Test selecting a preset option."""
         # Set up the entity's state
         mock_preset_select._current_effect = mock_preset_data["current_effect"]
         mock_preset_select._presets = ["preset1", "preset2"]
+
+        # Set up the coordinator and hass data for the fast refresh
+        mock_preset_select.coordinator.data = {
+            "current_effect": mock_preset_data["current_effect"],
+            "presets": mock_preset_data["presets"],
+        }
+        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
+        mock_preset_select.coordinator.async_set_updated_data = MagicMock()
+
+        # Mock the client's get methods that are called during direct refresh
+        mock_preset_select._client.get_current_effect = AsyncMock(
+            return_value=mock_preset_data["current_effect"]
+        )
+
+        # Set up mock coordinator in hass.data
+        mock_coordinator = MagicMock()
+        mock_coordinator.async_request_refresh = AsyncMock()
+
+        mock_preset_select.hass.data[DOMAIN] = {
+            mock_preset_select._config_entry.entry_id: {
+                "client": mock_preset_select._client,
+                "coordinator": mock_coordinator,
+            }
+        }
 
         # Test selecting a valid option
         await mock_preset_select.async_select_option("preset1")
@@ -206,7 +256,12 @@ class TestSignalRGBPresetSelect:
 
         assert mock_preset_select._current_preset == "preset1"
         mock_preset_select.async_write_ha_state.assert_called_once()
-        mock_preset_select.coordinator.async_request_refresh.assert_called_once()
+
+        # Verify the direct state fetching was called
+        mock_preset_select._client.get_current_effect.assert_called_once()
+
+        # Verify coordinator was updated directly
+        mock_preset_select.coordinator.async_set_updated_data.assert_called_once()
 
         # Test selecting an invalid option
         with pytest.raises(HomeAssistantError):

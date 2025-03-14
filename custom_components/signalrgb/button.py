@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Final
 
@@ -128,13 +129,48 @@ class SignalRGBButton(ButtonEntity):
             await method()
             LOGGER.info("Successfully executed %s on SignalRGB", method_name)
 
-            # The action changes the state of other entities, so we need to
-            # request a refresh of any data coordinators in the domain
-            # This will update the light entity and select entities
+            # Instead of just refreshing coordinators, let's directly fetch the current state
+            # and update the light entity's state with it
             entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
-            for key, item in entry_data.items():
-                if key != "client" and hasattr(item, "async_request_refresh"):
-                    await item.async_request_refresh()
+
+            # Very short delay to allow SignalRGB to process the change
+            # This is much shorter than the 2 seconds in the light entity
+            await asyncio.sleep(0.2)
+
+            # Directly fetch the current state from the API
+            try:
+                LOGGER.debug("Directly fetching current state after button press")
+                current_effect = await self._client.get_current_effect()
+                is_on = await self._client.get_enabled()
+                brightness = await self._client.get_brightness()
+
+                # If we have a light coordinator, update its data directly
+                if "coordinator" in entry_data:
+                    coordinator = entry_data["coordinator"]
+                    LOGGER.debug("Updating light coordinator data directly")
+                    coordinator.data = {
+                        "current_effect": current_effect,
+                        "is_on": is_on,
+                        "brightness": brightness,
+                    }
+                    # Force an update to all entities using this coordinator
+                    coordinator.async_set_updated_data(coordinator.data)
+
+                # Also refresh any other coordinators (like the effect/preset coordinator)
+                for key, item in entry_data.items():
+                    if key not in {"client", "coordinator"} and hasattr(
+                        item, "async_request_refresh"
+                    ):
+                        LOGGER.debug("Refreshing additional coordinator: %s", key)
+                        await item.async_request_refresh()
+
+            except SignalRGBException as refresh_err:
+                LOGGER.warning(
+                    "Error refreshing state after button press: %s", refresh_err
+                )
+                # Fall back to regular coordinator refresh if direct update fails
+                if "coordinator" in entry_data:
+                    await entry_data["coordinator"].async_request_refresh()
 
         except SignalRGBException as err:
             LOGGER.error("Failed to execute %s: %s", method_name, err)

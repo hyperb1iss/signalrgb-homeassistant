@@ -84,6 +84,15 @@ class TestSignalRGBButton:
         # Set up hass.data with a coordinator
         mock_coordinator = MagicMock()
         mock_coordinator.async_request_refresh = AsyncMock()
+        mock_coordinator.data = {}
+        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
+        mock_coordinator.async_set_updated_data = MagicMock()
+
+        # Mock the client's get methods that are called during direct refresh
+        mock_button._client.get_current_effect = AsyncMock()
+        mock_button._client.get_enabled = AsyncMock(return_value=True)
+        mock_button._client.get_brightness = AsyncMock(return_value=100)
+
         mock_hass.data[DOMAIN] = {
             mock_button._config_entry.entry_id: {
                 "client": mock_button._client,
@@ -96,8 +105,14 @@ class TestSignalRGBButton:
 
         # Verify the action was called directly (no executor job)
         mock_button._client.apply_next_effect.assert_called_once()
-        # Verify coordinator refresh was called
-        mock_coordinator.async_request_refresh.assert_called_once()
+
+        # Verify the direct state fetching was called
+        mock_button._client.get_current_effect.assert_called_once()
+        mock_button._client.get_enabled.assert_called_once()
+        mock_button._client.get_brightness.assert_called_once()
+
+        # Verify coordinator was updated directly
+        mock_coordinator.async_set_updated_data.assert_called_once()
 
     async def test_button_press_error(self, mock_button, mock_hass):
         """Test error handling when pressing the button."""
@@ -153,6 +168,14 @@ class TestSignalRGBButton:
         # Create a coordinator mock
         mock_coordinator = MagicMock()
         mock_coordinator.async_request_refresh = AsyncMock()
+        mock_coordinator.data = {}
+        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
+        mock_coordinator.async_set_updated_data = MagicMock()
+
+        # Mock the client's get methods that are called during direct refresh
+        mock_signalrgb_client.get_current_effect = AsyncMock()
+        mock_signalrgb_client.get_enabled = AsyncMock(return_value=True)
+        mock_signalrgb_client.get_brightness = AsyncMock(return_value=100)
 
         # Set up hass.data
         mock_hass.data[DOMAIN] = {
@@ -175,11 +198,14 @@ class TestSignalRGBButton:
 
         await next_button.async_press()
         mock_signalrgb_client.apply_next_effect.assert_called_once()
-        mock_coordinator.async_request_refresh.assert_called_once()
+        mock_coordinator.async_set_updated_data.assert_called_once()
 
         # Reset mocks
         mock_signalrgb_client.apply_next_effect.reset_mock()
-        mock_coordinator.async_request_refresh.reset_mock()
+        mock_coordinator.async_set_updated_data.reset_mock()
+        mock_signalrgb_client.get_current_effect.reset_mock()
+        mock_signalrgb_client.get_enabled.reset_mock()
+        mock_signalrgb_client.get_brightness.reset_mock()
 
         # Create and test the previous effect button
         prev_button_desc = SignalRGBButtonEntityDescription(
@@ -194,11 +220,14 @@ class TestSignalRGBButton:
 
         await prev_button.async_press()
         mock_signalrgb_client.apply_previous_effect.assert_called_once()
-        mock_coordinator.async_request_refresh.assert_called_once()
+        mock_coordinator.async_set_updated_data.assert_called_once()
 
         # Reset mocks
         mock_signalrgb_client.apply_previous_effect.reset_mock()
-        mock_coordinator.async_request_refresh.reset_mock()
+        mock_coordinator.async_set_updated_data.reset_mock()
+        mock_signalrgb_client.get_current_effect.reset_mock()
+        mock_signalrgb_client.get_enabled.reset_mock()
+        mock_signalrgb_client.get_brightness.reset_mock()
 
         # Create and test the random effect button
         random_button_desc = SignalRGBButtonEntityDescription(
@@ -213,4 +242,4 @@ class TestSignalRGBButton:
 
         await random_button.async_press()
         mock_signalrgb_client.apply_random_effect.assert_called_once()
-        mock_coordinator.async_request_refresh.assert_called_once()
+        mock_coordinator.async_set_updated_data.assert_called_once()

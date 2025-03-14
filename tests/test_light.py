@@ -3,6 +3,7 @@
 # pylint: disable=protected-access, redefined-outer-name
 
 import asyncio
+import contextlib
 from unittest.mock import MagicMock, patch
 
 from homeassistant.components.light import (
@@ -253,15 +254,21 @@ class TestSignalRGBLight:
 
         # Create a real asyncio.Task for _refresh_task
         async def mock_refresh():
-            await asyncio.sleep(10)  # Simulate a long-running task
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.sleep(10)  # Simulate a long-running task
 
-        mock_light._refresh_task = asyncio.create_task(mock_refresh())
+        task = asyncio.create_task(mock_refresh())
+        mock_light._refresh_task = task
 
         # Call the method we're testing
         await mock_light.async_will_remove_from_hass()
 
-        # Assert that the task was cancelled
-        assert mock_light._refresh_task.cancelled()
+        # Give the task a moment to process the cancellation
+        await asyncio.sleep(0.1)
+
+        # Assert that the task was cancelled and set to None
+        assert task.cancelled()
+        assert mock_light._refresh_task is None
 
 
 @pytest.fixture

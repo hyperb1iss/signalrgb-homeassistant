@@ -259,10 +259,10 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
     def _cancel_refresh_task(self) -> None:
         """Cancel any pending refresh task."""
-        if self._refresh_task and not self._refresh_task.done():
+        if self._refresh_task is not None and not self._refresh_task.done():
             LOGGER.debug("Cancelling existing refresh task")
             self._refresh_task.cancel()
-            self._refresh_task = None
+        self._refresh_task = None
 
     def _schedule_delayed_refresh(self) -> None:
         """Schedule a delayed refresh to verify the effect was applied correctly."""
@@ -272,39 +272,104 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
     async def _delayed_refresh(self) -> None:
         """Perform a delayed refresh and retry if necessary."""
-        await asyncio.sleep(2)  # Wait for 2 seconds before refreshing
+        # Use a much shorter delay for better responsiveness
+        await asyncio.sleep(
+            0.2
+        )  # Wait for 0.2 seconds before refreshing (down from 2 seconds)
 
         # Check if task has been cancelled while sleeping
-        if asyncio.current_task().cancelled():
+        current_task = asyncio.current_task()
+        if current_task is not None and current_task.cancelled():
             LOGGER.debug("Delayed refresh task was cancelled during sleep")
             return
 
-        await self.coordinator.async_request_refresh()
+        # Directly fetch the current state from the API for immediate feedback
+        try:
+            LOGGER.debug("Directly fetching current state after effect change")
+            current_effect = await self._client.get_current_effect()
+            is_on = await self._client.get_enabled()
+            brightness = await self._client.get_brightness()
 
-        if self._requested_effect and self.effect != self._requested_effect:
-            LOGGER.warning(
-                "Applied effect doesn't match requested effect. "
-                "Requested: %s, Applied: %s",
-                self._requested_effect,
-                self.effect,
-            )
-            if self._retry_count < self._max_retries:
-                self._retry_count += 1
-                LOGGER.debug(
-                    "Retrying effect application (Attempt %s of %s)",
-                    self._retry_count,
-                    self._max_retries,
+            # Update our coordinator data directly
+            if self.coordinator.data:
+                self.coordinator.data.update(
+                    {
+                        "current_effect": current_effect,
+                        "is_on": is_on,
+                        "brightness": brightness,
+                    }
                 )
-                await self._apply_effect(self._requested_effect)
-                self._schedule_delayed_refresh()
-            else:
-                LOGGER.error(
-                    "Failed to apply effect %s after %s attempts",
+                # Force an update to all entities using this coordinator
+                self.coordinator.async_set_updated_data(self.coordinator.data)
+
+            # Also refresh any other coordinators (particularly the effect/preset coordinator)
+            entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
+            for key, item in entry_data.items():
+                if key not in {"client", "coordinator"} and hasattr(
+                    item, "async_request_refresh"
+                ):
+                    LOGGER.debug("Refreshing additional coordinator: %s", key)
+                    await item.async_request_refresh()
+
+            # Check if the requested effect was applied correctly
+            if self._requested_effect and self.effect != self._requested_effect:
+                LOGGER.warning(
+                    "Applied effect doesn't match requested effect. "
+                    "Requested: %s, Applied: %s",
                     self._requested_effect,
-                    self._max_retries,
+                    self.effect,
                 )
-                self._requested_effect = None
-                self._retry_count = 0
+                if self._retry_count < self._max_retries:
+                    self._retry_count += 1
+                    LOGGER.debug(
+                        "Retrying effect application (Attempt %s of %s)",
+                        self._retry_count,
+                        self._max_retries,
+                    )
+                    await self._apply_effect(self._requested_effect)
+                    self._schedule_delayed_refresh()
+                else:
+                    LOGGER.error(
+                        "Failed to apply effect %s after %s attempts",
+                        self._requested_effect,
+                        self._max_retries,
+                    )
+                    self._requested_effect = None
+                    self._retry_count = 0
+
+        except SignalRGBException as refresh_err:
+            LOGGER.warning("Error directly refreshing state: %s", refresh_err)
+            # Fall back to regular coordinator refresh
+            await self.coordinator.async_request_refresh()
+
+            # Also refresh any other coordinators
+            entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
+            for key, item in entry_data.items():
+                if key not in {"client", "coordinator"} and hasattr(
+                    item, "async_request_refresh"
+                ):
+                    LOGGER.debug("Refreshing additional coordinator: %s", key)
+                    await item.async_request_refresh()
+
+            # Check if we need to retry the effect application
+            if self._requested_effect and self.effect != self._requested_effect:
+                if self._retry_count < self._max_retries:
+                    self._retry_count += 1
+                    LOGGER.debug(
+                        "Retrying effect application (Attempt %s of %s)",
+                        self._retry_count,
+                        self._max_retries,
+                    )
+                    await self._apply_effect(self._requested_effect)
+                    self._schedule_delayed_refresh()
+                else:
+                    LOGGER.error(
+                        "Failed to apply effect %s after %s attempts",
+                        self._requested_effect,
+                        self._max_retries,
+                    )
+                    self._requested_effect = None
+                    self._retry_count = 0
 
     async def async_update_effect_list(self) -> None:
         """Update the list of available effects."""
