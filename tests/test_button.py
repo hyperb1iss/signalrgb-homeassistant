@@ -16,6 +16,7 @@ from custom_components.signalrgb.button import (
     async_setup_entry,
 )
 from custom_components.signalrgb.const import DOMAIN
+from signalrgb import SignalRGBException
 
 # Import fixtures from conftest.py
 
@@ -93,43 +94,57 @@ class TestSignalRGBButton:
         # Press the button
         await mock_button.async_press()
 
-        # Verify the action was called
-        mock_button.hass.async_add_executor_job.assert_called_with(
-            mock_button._client.apply_next_effect
-        )
-
-        # Verify the coordinator was refreshed
+        # Verify the action was called directly (no executor job)
+        mock_button._client.apply_next_effect.assert_called_once()
+        # Verify coordinator refresh was called
         mock_coordinator.async_request_refresh.assert_called_once()
 
-    async def test_button_press_error(self, mock_button):
+    async def test_button_press_error(self, mock_button, mock_hass):
         """Test error handling when pressing the button."""
-        # Test with a non-existent method
-        invalid_description = SignalRGBButtonEntityDescription(
-            key="invalid",
-            name="Invalid Button",
-            action_method="nonexistent_method",
+        # Set up hass.data with a coordinator
+        mock_coordinator = MagicMock()
+        mock_coordinator.async_request_refresh = AsyncMock()
+        mock_hass.data[DOMAIN] = {
+            mock_button._config_entry.entry_id: {
+                "client": mock_button._client,
+                "coordinator": mock_coordinator,
+            }
+        }
+
+        # Set up the mock to raise an exception when awaited
+        mock_button._client.apply_next_effect = AsyncMock(
+            side_effect=SignalRGBException("Test error")
         )
 
-        invalid_button = SignalRGBButton(
-            mock_button._client,
-            mock_button._config_entry,
-            invalid_description,
-        )
-        invalid_button.hass = mock_button.hass
+        # Press the button and expect an error
+        with pytest.raises(HomeAssistantError):
+            await mock_button.async_press()
 
-        # Set up hass.data with a mock entry
-        mock_button.hass.data[DOMAIN] = {
+    async def test_button_press_unknown_method(self, mock_button, mock_hass):
+        """Test error when pressing a button with an unknown method."""
+        # Set up hass.data
+        mock_hass.data[DOMAIN] = {
             mock_button._config_entry.entry_id: {
                 "client": mock_button._client,
             }
         }
 
-        # Patch hasattr to return False for nonexistent_method
-        with patch("builtins.hasattr", lambda obj, attr: attr != "nonexistent_method"):
-            with pytest.raises(HomeAssistantError) as exc_info:
-                await invalid_button.async_press()
+        # Create a new button with a method name that doesn't exist
+        with patch.object(mock_button._client, "unknown_method", None):
+            # Use a method that doesn't exist on the client
+            mock_button.entity_description = SignalRGBButtonEntityDescription(
+                key="unknown",
+                name="Unknown Button",
+                action_method="unknown_method",
+            )
 
-            assert "Action not supported" in str(exc_info.value)
+            # Patch hasattr to return False for the unknown method
+            with (
+                patch("builtins.hasattr", return_value=False),
+                pytest.raises(HomeAssistantError),
+            ):
+                # Press the button and expect an error
+                await mock_button.async_press()
 
     async def test_all_button_types(
         self, mock_hass, mock_signalrgb_client, mock_config_entry
@@ -158,17 +173,13 @@ class TestSignalRGBButton:
         )
         next_button.hass = mock_hass
 
-        # When we call async_press, it will call the async_add_executor_job with the apply_next_effect method
-        # We need to make sure this actually invokes the method on our mock when called
-        mock_hass.async_add_executor_job.side_effect = (
-            lambda method, *args, **kwargs: method(*args, **kwargs)
-        )
-
         await next_button.async_press()
         mock_signalrgb_client.apply_next_effect.assert_called_once()
+        mock_coordinator.async_request_refresh.assert_called_once()
 
-        # Reset the mock counters for the next test
-        mock_signalrgb_client.reset_mock()
+        # Reset mocks
+        mock_signalrgb_client.apply_next_effect.reset_mock()
+        mock_coordinator.async_request_refresh.reset_mock()
 
         # Create and test the previous effect button
         prev_button_desc = SignalRGBButtonEntityDescription(
@@ -180,11 +191,14 @@ class TestSignalRGBButton:
             mock_signalrgb_client, mock_config_entry, prev_button_desc
         )
         prev_button.hass = mock_hass
+
         await prev_button.async_press()
         mock_signalrgb_client.apply_previous_effect.assert_called_once()
+        mock_coordinator.async_request_refresh.assert_called_once()
 
-        # Reset the mock counters for the next test
-        mock_signalrgb_client.reset_mock()
+        # Reset mocks
+        mock_signalrgb_client.apply_previous_effect.reset_mock()
+        mock_coordinator.async_request_refresh.reset_mock()
 
         # Create and test the random effect button
         random_button_desc = SignalRGBButtonEntityDescription(
@@ -196,5 +210,7 @@ class TestSignalRGBButton:
             mock_signalrgb_client, mock_config_entry, random_button_desc
         )
         random_button.hass = mock_hass
+
         await random_button.async_press()
         mock_signalrgb_client.apply_random_effect.assert_called_once()
+        mock_coordinator.async_request_refresh.assert_called_once()

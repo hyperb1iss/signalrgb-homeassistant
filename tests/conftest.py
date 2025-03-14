@@ -31,19 +31,28 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 @pytest.fixture
 def mock_signalrgb_client():
-    """Mock SignalRGB client."""
-    with patch("signalrgb.client.SignalRGBClient") as mock_client:
+    """Mock AsyncSignalRGB client."""
+    with patch("signalrgb.AsyncSignalRGBClient") as mock_client:
         client = mock_client.return_value
-        client.get_current_effect = MagicMock()
-        client.get_effects = MagicMock()
-        client.apply_effect_by_name = MagicMock()
-        client.get_layouts = MagicMock()
-        client.current_layout = MagicMock()
-        client.apply_next_effect = MagicMock()
-        client.apply_previous_effect = MagicMock()
-        client.apply_random_effect = MagicMock()
-        client.get_effect_presets = MagicMock()
-        client.apply_effect_preset = MagicMock()
+        # Use AsyncMock for async methods
+        client.get_current_effect = AsyncMock()
+        client.get_effects = AsyncMock()
+        client.apply_effect_by_name = AsyncMock()
+        client.get_layouts = AsyncMock()
+        client.get_current_layout = AsyncMock()
+        client.set_current_layout = AsyncMock()
+        client.apply_next_effect = AsyncMock()
+        client.apply_previous_effect = AsyncMock()
+        client.apply_random_effect = AsyncMock()
+        client.get_effect_presets = AsyncMock()
+        client.apply_effect_preset = AsyncMock()
+        client.get_effect_by_name = AsyncMock()
+        client.get_enabled = AsyncMock()
+        client.set_enabled = AsyncMock()
+        client.get_brightness = AsyncMock()
+        client.set_brightness = AsyncMock()
+        client.refresh_effects = AsyncMock()
+        client.aclose = AsyncMock()
         yield client
 
 

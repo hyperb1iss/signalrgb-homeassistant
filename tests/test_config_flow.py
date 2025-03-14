@@ -7,7 +7,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.signalrgb.const import DOMAIN
-from signalrgb.client import (
+from signalrgb.exceptions import (
     ConnectionError as SignalRGBConnectionError,
     SignalRGBException,
 )
@@ -18,15 +18,15 @@ from signalrgb.client import (
 # actual functionality of the integration in other test modules.
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
-    """Prevent setup."""
-    with (
-        patch("custom_components.signalrgb.async_setup", return_value=True),
-        patch("custom_components.signalrgb.async_setup_entry", return_value=True),
+    """Prevent actual setup of the integration."""
+    with patch(
+        "custom_components.signalrgb.async_setup_entry",
+        return_value=True,
     ):
         yield
 
 
-# Mock config data
+# Mock config data to be used
 MOCK_CONFIG = {"host": "192.168.1.100", "port": 16038}
 
 
@@ -38,9 +38,15 @@ async def test_form(hass):
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {}
 
-    with patch(
-        "signalrgb.client.SignalRGBClient.get_current_effect",
-        return_value=True,
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            return_value=True,
+        ),
+        patch(
+            "signalrgb.AsyncSignalRGBClient.aclose",
+            return_value=None,
+        ),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -49,7 +55,7 @@ async def test_form(hass):
         await hass.async_block_till_done()
 
     assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert result2["title"] == MOCK_CONFIG["host"]
+    assert result2["title"] == "192.168.1.100"
     assert result2["data"] == MOCK_CONFIG
 
 
@@ -59,9 +65,15 @@ async def test_form_cannot_connect(hass):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    with patch(
-        "signalrgb.client.SignalRGBClient.get_current_effect",
-        side_effect=SignalRGBConnectionError("Cannot connect"),
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            side_effect=SignalRGBConnectionError("Cannot connect"),
+        ),
+        patch(
+            "signalrgb.AsyncSignalRGBClient.aclose",
+            return_value=None,
+        ),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -73,14 +85,20 @@ async def test_form_cannot_connect(hass):
 
 
 async def test_form_exception(hass):
-    """Test we handle general API exceptions."""
+    """Test we handle general exception."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    with patch(
-        "signalrgb.client.SignalRGBClient.get_current_effect",
-        side_effect=SignalRGBException("API Error"),
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            side_effect=SignalRGBException("Unknown error"),
+        ),
+        patch(
+            "signalrgb.AsyncSignalRGBClient.aclose",
+            return_value=None,
+        ),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -97,9 +115,15 @@ async def test_form_unexpected_exception(hass):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    with patch(
-        "signalrgb.client.SignalRGBClient.get_current_effect",
-        side_effect=Exception,
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            side_effect=Exception("Unexpected error"),
+        ),
+        patch(
+            "signalrgb.AsyncSignalRGBClient.aclose",
+            return_value=None,
+        ),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -123,9 +147,15 @@ async def test_flow_entry_already_exists(hass):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    with patch(
-        "signalrgb.client.SignalRGBClient.get_current_effect",
-        return_value=True,
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            return_value=True,
+        ),
+        patch(
+            "signalrgb.AsyncSignalRGBClient.aclose",
+            return_value=None,
+        ),
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],

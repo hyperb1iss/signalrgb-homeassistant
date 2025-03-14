@@ -9,7 +9,8 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
 
-from signalrgb.client import (
+from signalrgb import (
+    AsyncSignalRGBClient,
     ConnectionError as SignalRGBConnectionError,
     SignalRGBException,
 )
@@ -41,16 +42,15 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            from signalrgb.client import SignalRGBClient
-
-            client = SignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
+            client = AsyncSignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
             LOGGER.debug(
                 "Testing connection to SignalRGB at %s:%s",
                 user_input[CONF_HOST],
                 user_input[CONF_PORT],
             )
             # Test the connection by getting the current effect
-            await self.hass.async_add_executor_job(client.get_current_effect)
+            await client.get_current_effect()
+            await client.aclose()
             LOGGER.debug("Successfully connected to SignalRGB")
         except SignalRGBConnectionError:
             LOGGER.error(

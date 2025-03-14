@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from signalrgb.client import SignalRGBClient, SignalRGBException
+from signalrgb import AsyncSignalRGBClient, SignalRGBException
 
 from .const import (
     DOMAIN,
@@ -66,7 +66,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up SignalRGB button entities based on a config entry."""
     LOGGER.debug("Setting up SignalRGB button entities for entry: %s", entry.entry_id)
-    client: SignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
+    client: AsyncSignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
     entities = []
     for description in BUTTON_TYPES:
@@ -94,7 +94,7 @@ class SignalRGBButton(ButtonEntity):
 
     def __init__(
         self,
-        client: SignalRGBClient,
+        client: AsyncSignalRGBClient,
         config_entry: ConfigEntry,
         description: SignalRGBButtonEntityDescription,
     ) -> None:
@@ -119,13 +119,13 @@ class SignalRGBButton(ButtonEntity):
         method_name = self.entity_description.action_method
 
         if not method_name or not hasattr(self._client, method_name):
-            LOGGER.error("Method %s not found on SignalRGBClient", method_name)
+            LOGGER.error("Method %s not found on AsyncSignalRGBClient", method_name)
             raise HomeAssistantError(f"Action not supported: {method_name}")
 
         try:
-            # Get the method and call it
+            # Get the method and call it directly (it's already async)
             method = getattr(self._client, method_name)
-            await self.hass.async_add_executor_job(method)
+            await method()
             LOGGER.info("Successfully executed %s on SignalRGB", method_name)
 
             # The action changes the state of other entities, so we need to

@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 import homeassistant.helpers.config_validation as cv
 
-from signalrgb.client import SignalRGBClient, SignalRGBException
+from signalrgb import AsyncSignalRGBClient, SignalRGBException
 
 from .const import DOMAIN, LOGGER, PLATFORMS
 
@@ -28,11 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SignalRGB from a config entry."""
     LOGGER.debug("Setting up SignalRGB integration for %s", entry.data[CONF_HOST])
 
-    client = SignalRGBClient(entry.data[CONF_HOST], entry.data[CONF_PORT])
+    client = AsyncSignalRGBClient(entry.data[CONF_HOST], entry.data[CONF_PORT])
 
     try:
         # Test the connection by getting the current effect
-        await hass.async_add_executor_job(client.get_current_effect)
+        await client.get_current_effect()
     except SignalRGBException as err:
         LOGGER.error(
             "Failed to connect to SignalRGB at %s:%s: %s",
@@ -40,6 +40,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_PORT],
             err,
         )
+        # Make sure to close the client on error
+        await client.aclose()
         raise ConfigEntryNotReady from err
 
     # Store client in hass.data - coordinators will be added by platform setup
@@ -58,6 +60,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug("Unloading SignalRGB integration for %s", entry.data[CONF_HOST])
 
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        # Close the client when unloading
+        client = hass.data[DOMAIN][entry.entry_id]["client"]
+        await client.aclose()
+
         hass.data[DOMAIN].pop(entry.entry_id)
         LOGGER.info("SignalRGB integration unloaded for %s", entry.data[CONF_HOST])
     else:

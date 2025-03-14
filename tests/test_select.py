@@ -39,14 +39,12 @@ async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_cl
     mock_preset = MagicMock()
     mock_preset.id = "test_preset"
 
-    # Set up side effects for all the calls in the setup method
-    mock_hass.async_add_executor_job.side_effect = [
-        [mock_layout],  # get_layouts
-        mock_layout,  # current_layout
-        mock_effect,  # get_current_effect
-        [mock_effect],  # get_effects
-        [mock_preset],  # get_effect_presets
-    ]
+    # Set up return values for the async client methods
+    mock_signalrgb_client.get_layouts.return_value = [mock_layout]
+    mock_signalrgb_client.get_current_layout.return_value = mock_layout
+    mock_signalrgb_client.get_current_effect.return_value = mock_effect
+    mock_signalrgb_client.get_effects.return_value = [mock_effect]
+    mock_signalrgb_client.get_effect_presets.return_value = [mock_preset]
 
     # Call async_setup_entry
     entities = []
@@ -131,9 +129,8 @@ class TestSignalRGBLayoutSelect:
         await mock_layout_select.async_select_option("layout2")
 
         # Verify the client was called to set the layout
-        mock_layout_select.hass.async_add_executor_job.assert_called_with(
-            setattr, mock_layout_select._client, "current_layout", "layout2"
-        )
+        mock_layout_select._client.set_current_layout.assert_called_with("layout2")
+
         assert mock_layout_select._current_layout_id == "layout2"
         mock_layout_select.async_write_ha_state.assert_called_once()
         mock_layout_select.coordinator.async_request_refresh.assert_called_once()
@@ -201,12 +198,12 @@ class TestSignalRGBPresetSelect:
         # Test selecting a valid option
         await mock_preset_select.async_select_option("preset1")
 
-        # Verify the client was called to apply the preset
-        mock_preset_select.hass.async_add_executor_job.assert_called_with(
-            mock_preset_select._client.apply_effect_preset,
+        # Verify the client was called to apply the preset directly
+        mock_preset_select._client.apply_effect_preset.assert_called_with(
             mock_preset_data["current_effect"].id,
             "preset1",
         )
+
         assert mock_preset_select._current_preset == "preset1"
         mock_preset_select.async_write_ha_state.assert_called_once()
         mock_preset_select.coordinator.async_request_refresh.assert_called_once()

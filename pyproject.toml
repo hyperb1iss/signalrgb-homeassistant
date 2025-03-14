@@ -17,7 +17,9 @@ classifiers = [
 # Dependencies
 dependencies = [
     "homeassistant>=2025.3.2",
-    "signalrgb==0.9.8",
+    # "signalrgb==0.9.8",  # Comment out the PyPI version
+    # "signalrgb @ file:///home/bliss/dev/signalrgb-python",  # Reference local copy
+    "signalrgb @ git+https://github.com/hyperb1iss/signalrgb-python.git",  # Latest from git
     "colorama>=0.4.6",
 ]
 
@@ -46,6 +48,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["custom_components"]
+
+# Add configuration to allow direct references in dependencies
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

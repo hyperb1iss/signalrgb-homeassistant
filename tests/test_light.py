@@ -3,7 +3,7 @@
 # pylint: disable=protected-access, redefined-outer-name
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -39,14 +39,14 @@ async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_cl
         mock_config_entry.entry_id: {"client": mock_signalrgb_client}
     }
 
-    # Mock the get_current_effect and properties method results for update
+    # Mock the async client method results for update
     mock_effect = MagicMock()
     mock_effect.attributes.name = "Test Effect"
-    mock_hass.async_add_executor_job.side_effect = [
-        mock_effect,  # For get_current_effect
-        True,  # For enabled check
-        75,  # For brightness check
-    ]
+
+    # Set return values for direct async calls
+    mock_signalrgb_client.get_current_effect.return_value = mock_effect
+    mock_signalrgb_client.get_enabled.return_value = True
+    mock_signalrgb_client.get_brightness.return_value = 75
 
     # Call async_setup_entry and wait for the coordinator's first refresh
     entities = []
@@ -89,45 +89,37 @@ class TestSignalRGBLight:
 
     async def test_turn_on(self, mock_light, mock_coordinator):
         """Test turning on the light."""
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        # Mock the _schedule_delayed_refresh method to prevent actual waiting
+        with patch.object(mock_light, "_schedule_delayed_refresh") as mock_refresh:
             await mock_light.async_turn_on()
 
-        mock_light.hass.async_add_executor_job.assert_any_call(
-            setattr, mock_light._client, "enabled", True
-        )
+        # Verify set_enabled was called directly (no executor job)
+        mock_light._client.set_enabled.assert_called_with(True)
+
         assert mock_light._is_on is True
         assert mock_light.async_write_ha_state.call_count == 1  # Once for turning on
 
-        # Run the delayed refresh
-        await mock_light._delayed_refresh()
-        mock_coordinator.async_request_refresh.assert_called_once()
-
-        # Clean up
-        mock_light._cancel_refresh_task()
+        # Verify refresh was scheduled
+        mock_refresh.assert_called_once()
 
     async def test_turn_on_with_brightness(self, mock_light, mock_coordinator):
         """Test turning on the light with brightness."""
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        # Mock the _schedule_delayed_refresh method to prevent actual waiting
+        with patch.object(mock_light, "_schedule_delayed_refresh") as mock_refresh:
             await mock_light.async_turn_on(**{ATTR_BRIGHTNESS: 128})
 
-        mock_light.hass.async_add_executor_job.assert_any_call(
-            setattr, mock_light._client, "enabled", True
-        )
-        mock_light.hass.async_add_executor_job.assert_any_call(
-            setattr, mock_light._client, "brightness", 50
-        )
+        # Verify direct client calls
+        mock_light._client.set_enabled.assert_called_with(True)
+        mock_light._client.set_brightness.assert_called_with(50)
+
         assert mock_light._is_on is True
         assert mock_light._brightness == 50
         assert (
             mock_light.async_write_ha_state.call_count == 2
         )  # Once for on, once for brightness
 
-        # Run the delayed refresh
-        await mock_light._delayed_refresh()
-        mock_coordinator.async_request_refresh.assert_called_once()
-
-        # Clean up
-        mock_light._cancel_refresh_task()
+        # Verify refresh was scheduled
+        mock_refresh.assert_called_once()
 
     async def test_turn_on_with_effect(self, mock_light, mock_coordinator):
         """Test turning on the light with an effect."""
@@ -136,14 +128,18 @@ class TestSignalRGBLight:
         mock_effect_obj.id = "test_effect_id"
         mock_effect_obj.attributes.name = mock_effect
 
-        mock_light.hass.async_add_executor_job.side_effect = [
-            True,  # For setting enabled
-            mock_effect_obj,  # For get_effect_by_name
-            None,  # For apply_effect_by_name
-        ]
+        # Set up the client method return values
+        mock_light._client.get_effect_by_name.return_value = mock_effect_obj
+        mock_light._client.apply_effect_by_name.return_value = None
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
+        # Mock the _schedule_delayed_refresh method
+        with patch.object(mock_light, "_schedule_delayed_refresh") as mock_refresh:
             await mock_light.async_turn_on(**{ATTR_EFFECT: mock_effect})
+
+        # Verify direct client calls
+        mock_light._client.set_enabled.assert_called_with(True)
+        mock_light._client.get_effect_by_name.assert_called_with(mock_effect)
+        mock_light._client.apply_effect_by_name.assert_called_with(mock_effect)
 
         assert mock_light._is_on is True
         assert mock_light._current_effect == mock_effect_obj
@@ -151,19 +147,16 @@ class TestSignalRGBLight:
             mock_light.async_write_ha_state.call_count == 2
         )  # Once for on, once for effect
 
-        # Run the delayed refresh
-        await mock_light._delayed_refresh()
-        mock_coordinator.async_request_refresh.assert_called_once()
-
-        # Clean up
-        mock_light._cancel_refresh_task()
+        # Verify refresh was scheduled
+        mock_refresh.assert_called_once()
 
     async def test_turn_off(self, mock_light, mock_coordinator):
         """Test turning off the light."""
         await mock_light.async_turn_off()
-        mock_light.hass.async_add_executor_job.assert_called_with(
-            setattr, mock_light._client, "enabled", False
-        )
+
+        # Verify direct client call
+        mock_light._client.set_enabled.assert_called_with(False)
+
         assert mock_light._is_on is False
         mock_light.async_write_ha_state.assert_called_once()
         mock_coordinator.async_request_refresh.assert_called_once()
@@ -174,10 +167,10 @@ class TestSignalRGBLight:
         mock_effect1.attributes.name = "Effect 1"
         mock_effect2 = MagicMock()
         mock_effect2.attributes.name = "Effect 2"
-        mock_light.hass.async_add_executor_job.side_effect = [
-            None,  # For refresh_effects
-            [mock_effect1, mock_effect2],  # For get_effects
-        ]
+
+        # Set up the client method return values
+        mock_light._client.refresh_effects.return_value = None
+        mock_light._client.get_effects.return_value = [mock_effect1, mock_effect2]
 
         await mock_light.async_update_effect_list()
         assert mock_light.effect_list == ["Effect 1", "Effect 2"]
@@ -189,12 +182,16 @@ class TestSignalRGBLight:
         mock_effect_obj.id = "test_effect_id"
         mock_effect_obj.attributes.name = mock_effect
 
-        mock_light.hass.async_add_executor_job.side_effect = [
-            mock_effect_obj,  # For get_effect_by_name
-            None,  # For apply_effect_by_name
-        ]
+        # Set up the client method return values
+        mock_light._client.get_effect_by_name.return_value = mock_effect_obj
+        mock_light._client.apply_effect_by_name.return_value = None
 
         await mock_light._apply_effect(mock_effect)
+
+        # Verify direct client calls
+        mock_light._client.get_effect_by_name.assert_called_with(mock_effect)
+        mock_light._client.apply_effect_by_name.assert_called_with(mock_effect)
+
         assert mock_light._current_effect == mock_effect_obj
         mock_light.async_write_ha_state.assert_called_once()
 

@@ -1,5 +1,7 @@
 """Test the SignalRGB integration initialization."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
 
@@ -8,18 +10,42 @@ from custom_components.signalrgb import (
     async_unload_entry,
 )
 from custom_components.signalrgb.const import DOMAIN, PLATFORMS
-from signalrgb.client import SignalRGBException
+from signalrgb.exceptions import SignalRGBException
 
 
-async def test_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
+@pytest.fixture
+def mock_get_current_effect():
+    """Mock the get_current_effect method to avoid HTTP calls."""
+    # Instead of mocking _get_current_state, we should mock get_current_effect directly
+    with patch(
+        "signalrgb.AsyncSignalRGBClient.get_current_effect", new_callable=AsyncMock
+    ) as mock:
+        # Create a mock effect with the right attributes
+        mock_effect = MagicMock()
+        mock_effect.attributes.name = "Test Effect"
+        mock.return_value = mock_effect
+        yield mock
+
+
+@pytest.fixture
+def mock_httpx_client():
+    """Mock the httpx client to prevent socket connections."""
+    with patch("httpx.AsyncClient", autospec=True) as mock:
+        client_instance = MagicMock()
+        client_instance.aclose = AsyncMock()
+        client_instance.request = AsyncMock()
+        mock.return_value = client_instance
+        yield mock
+
+
+async def test_setup_entry(
+    mock_hass, mock_config_entry, mock_get_current_effect, mock_httpx_client
+):
     """Test successful setup of the config entry."""
-    # Mock the client get_current_effect method to not raise an exception
-    mock_hass.async_add_executor_job.return_value = None
-
     # Call async_setup_entry
     assert await async_setup_entry(mock_hass, mock_config_entry)
 
-    # Verify that the client was stored in hass.data
+    # Verify that a client was stored in hass.data
     assert mock_config_entry.entry_id in mock_hass.data[DOMAIN]
     assert "client" in mock_hass.data[DOMAIN][mock_config_entry.entry_id]
 
@@ -29,14 +55,21 @@ async def test_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
     )
 
 
-async def test_setup_entry_failed(mock_hass, mock_config_entry):
+async def test_setup_entry_failed(mock_hass, mock_config_entry, mock_httpx_client):
     """Test setup when the client raises an exception."""
-    # Make the client raise an exception during connection test
+    # Set up the error
     error = SignalRGBException("Connection failed")
-    mock_hass.async_add_executor_job.side_effect = error
 
-    # Call async_setup_entry and expect it to raise ConfigEntryNotReady
-    with pytest.raises(ConfigEntryNotReady) as exc_info:
+    # Directly patch at the method level
+    with (
+        patch(
+            "signalrgb.AsyncSignalRGBClient.get_current_effect",
+            new_callable=AsyncMock,
+            side_effect=error,
+        ),
+        pytest.raises(ConfigEntryNotReady) as exc_info,
+    ):
+        # Call async_setup_entry and expect it to raise ConfigEntryNotReady
         await async_setup_entry(mock_hass, mock_config_entry)
 
     # Verify that the exception contains the original error
@@ -65,3 +98,5 @@ async def test_unload_entry(mock_hass, mock_config_entry, mock_signalrgb_client)
     mock_hass.config_entries.async_unload_platforms.assert_called_with(
         mock_config_entry, PLATFORMS
     )
+    # Verify the client was properly closed
+    mock_signalrgb_client.aclose.assert_called_once()

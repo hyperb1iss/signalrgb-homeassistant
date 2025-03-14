@@ -20,7 +20,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from signalrgb.client import SignalRGBClient, SignalRGBException
+from signalrgb import AsyncSignalRGBClient, SignalRGBException
 from signalrgb.model import Effect, Layout
 
 from .const import (
@@ -60,17 +60,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up SignalRGB select entities based on a config entry."""
     LOGGER.debug("Setting up SignalRGB select entities for entry: %s", entry.entry_id)
-    client: SignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
+    client: AsyncSignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
     # Layout coordinator
     async def async_update_layouts() -> dict[str, Any]:
         """Fetch layouts from API endpoint."""
         try:
             LOGGER.debug("Fetching layouts from SignalRGB API")
-            layouts = await hass.async_add_executor_job(client.get_layouts)
-            current_layout = await hass.async_add_executor_job(
-                lambda: client.current_layout
-            )
+            layouts = await client.get_layouts()
+            current_layout = await client.get_current_layout()
             return {
                 "layouts": layouts,
                 "current_layout": current_layout,
@@ -93,18 +91,14 @@ async def async_setup_entry(
         """Fetch current effect and available effects from API endpoint."""
         try:
             LOGGER.debug("Fetching current effect from SignalRGB API")
-            current_effect = await hass.async_add_executor_job(
-                client.get_current_effect
-            )
-            effects = await hass.async_add_executor_job(client.get_effects)
+            current_effect = await client.get_current_effect()
+            effects = await client.get_effects()
 
             # If we have a current effect, also get its presets
             presets = []
             if current_effect:
                 try:
-                    presets = await hass.async_add_executor_job(
-                        client.get_effect_presets, current_effect.id
-                    )
+                    presets = await client.get_effect_presets(current_effect.id)
                 except SignalRGBException as preset_err:
                     LOGGER.warning(
                         "Error fetching presets for effect %s: %s",
@@ -174,7 +168,7 @@ class SignalRGBBaseSelect(CoordinatorEntity, SelectEntity):
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        client: SignalRGBClient,
+        client: AsyncSignalRGBClient,
         config_entry: ConfigEntry,
         select_type: str,
     ) -> None:
@@ -202,7 +196,7 @@ class SignalRGBLayoutSelect(SignalRGBBaseSelect):
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        client: SignalRGBClient,
+        client: AsyncSignalRGBClient,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the layout select entity."""
@@ -243,9 +237,7 @@ class SignalRGBLayoutSelect(SignalRGBBaseSelect):
 
         try:
             layout_id = self._layouts[option].id
-            await self.hass.async_add_executor_job(
-                setattr, self._client, "current_layout", layout_id
-            )
+            await self._client.set_current_layout(layout_id)
             self._current_layout_id = layout_id
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
@@ -281,7 +273,7 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
-        client: SignalRGBClient,
+        client: AsyncSignalRGBClient,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the preset select entity."""
@@ -322,9 +314,7 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
             raise HomeAssistantError(f"Preset {option} not found")
 
         try:
-            await self.hass.async_add_executor_job(
-                self._client.apply_effect_preset, self._current_effect.id, option
-            )
+            await self._client.apply_effect_preset(self._current_effect.id, option)
             self._current_preset = option
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()

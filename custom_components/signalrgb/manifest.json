@@ -12,7 +12,7 @@
     "signalrgb"
   ],
   "requirements": [
-    "signalrgb==0.9.8"
+    "signalrgb @ git+https://github.com/hyperb1iss/signalrgb-python.git"
   ],
   "version": "0.8.0"
 }
