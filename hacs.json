@@ -1,9 +1,5 @@
 {
   "name": "SignalRGB Integration",
-  "country": ["US"],
-  "render_readme": true,
-  "homeassistant": "2025.3.2",
-  "hacs": "1.24.0",
-  "domains": ["light", "select", "button"],
-  "iot_class": "local_polling"
+  "country": "US",
+  "homeassistant": "2025.3.2"
 }
