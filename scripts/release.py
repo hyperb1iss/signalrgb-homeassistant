@@ -246,6 +246,17 @@ def update_pyproject_toml(new_version: str) -> None:
         sys.exit(1)
 
 
+def run_uv_lock() -> None:
+    """Run uv lock to update the lockfile with the new version."""
+    print_step("Updating lockfile with uv lock")
+    try:
+        subprocess.run(["uv", "lock"], check=True)
+        print_success("Lockfile updated successfully")
+    except subprocess.CalledProcessError as e:
+        print_error(f"Failed to run uv lock: {e!s}")
+        sys.exit(1)
+
+
 def copy_integration(src_path: str, dest_path: str) -> None:
     """Copy the integration from source to destination."""
     try:
@@ -348,6 +359,7 @@ def main() -> None:
 
         update_manifest(args.version)
         update_pyproject_toml(args.version)
+        run_uv_lock()
         commit_and_push(args.version)
 
         print_success(
