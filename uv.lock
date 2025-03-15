@@ -1953,8 +1953,8 @@ wheels = [
 
 [[package]]
 name = "signalrgb"
-version = "0.9.8"
-source = { git = "https://github.com/hyperb1iss/signalrgb-python.git#12aa188e06a427de3d20ff4cbc1ab43f85c0f8f2" }
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "mashumaro" },
@@ -1965,6 +1965,10 @@ dependencies = [
     { name = "typer" },
     { name = "urllib3" },
     { name = "wcwidth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/13/b6d16c5d8027e1e881dd18cbbd3ca2582d373b92d0b3137fa00f12e09d58/signalrgb-1.0.0.tar.gz", hash = "sha256:120508021bb0fa63f3126c754cafd095016f0be5ad29cece0e58a27ee4f7fd1a", size = 94769 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4b/11/7fa5600904bee40f28869fb1f9303c90fb9db40bbde17cbea48022211ba3/signalrgb-1.0.0-py3-none-any.whl", hash = "sha256:324bce8f91d4c2f7ecf8751cf0c38f2a55a4c74a77b58572e368a156c81250fa", size = 25755 },
 ]
 
 [[package]]
@@ -1995,7 +1999,7 @@ dev = [
 requires-dist = [
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "homeassistant", specifier = ">=2025.3.2" },
-    { name = "signalrgb", git = "https://github.com/hyperb1iss/signalrgb-python.git" },
+    { name = "signalrgb", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]

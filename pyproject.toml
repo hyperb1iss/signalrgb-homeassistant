@@ -17,9 +17,7 @@ classifiers = [
 # Dependencies
 dependencies = [
     "homeassistant>=2025.3.2",
-    # "signalrgb==0.9.8",  # Comment out the PyPI version
-    # "signalrgb @ file:///home/bliss/dev/signalrgb-python",  # Reference local copy
-    "signalrgb @ git+https://github.com/hyperb1iss/signalrgb-python.git",  # Latest from git
+    "signalrgb>=1.0.0",
     "colorama>=0.4.6",
 ]
 
