@@ -60,20 +60,22 @@ async def test_setup_entry_failed(mock_hass, mock_config_entry, mock_httpx_clien
     # Set up the error
     error = SignalRGBException("Connection failed")
 
-    # Directly patch at the method level
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            new_callable=AsyncMock,
-            side_effect=error,
-        ),
-        pytest.raises(ConfigEntryNotReady) as exc_info,
-    ):
-        # Call async_setup_entry and expect it to raise ConfigEntryNotReady
+    # Create a mock client that will raise an exception
+    mock_client = AsyncMock()
+    mock_client.get_current_effect.side_effect = error
+    mock_client.aclose = AsyncMock()
+
+    # Set up the mock_hass to return our mock client
+    mock_hass.async_add_executor_job.return_value = mock_client
+
+    # Call async_setup_entry and expect it to raise ConfigEntryNotReady
+    with pytest.raises(ConfigEntryNotReady) as exc_info:
         await async_setup_entry(mock_hass, mock_config_entry)
 
     # Verify that the exception contains the original error
     assert isinstance(exc_info.value.__cause__, SignalRGBException)
+    # Verify that client.aclose was called
+    mock_client.aclose.assert_called_once()
 
 
 async def test_unload_entry(mock_hass, mock_config_entry, mock_signalrgb_client):

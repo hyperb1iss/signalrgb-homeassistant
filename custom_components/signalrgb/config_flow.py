@@ -10,11 +10,11 @@ from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
 
 from signalrgb import (
-    AsyncSignalRGBClient,
     ConnectionError as SignalRGBConnectionError,
     SignalRGBException,
 )
 
+from . import _create_client
 from .const import DEFAULT_PORT, DOMAIN, LOGGER
 
 DATA_SCHEMA = vol.Schema(
@@ -42,7 +42,11 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            client = AsyncSignalRGBClient(user_input[CONF_HOST], user_input[CONF_PORT])
+            # Initialize client in a thread executor to avoid blocking SSL certificate loading
+            client = await self.hass.async_add_executor_job(
+                _create_client, user_input[CONF_HOST], user_input[CONF_PORT]
+            )
+
             LOGGER.debug(
                 "Testing connection to SignalRGB at %s:%s",
                 user_input[CONF_HOST],

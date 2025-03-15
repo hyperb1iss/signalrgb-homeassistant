@@ -24,11 +24,19 @@ async def async_setup(hass: HomeAssistant, _config: dict[str, Any]) -> bool:
     return True
 
 
+def _create_client(host: str, port: int) -> AsyncSignalRGBClient:
+    """Create client in executor to avoid blocking SSL operations."""
+    return AsyncSignalRGBClient(host, port)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SignalRGB from a config entry."""
     LOGGER.debug("Setting up SignalRGB integration for %s", entry.data[CONF_HOST])
 
-    client = AsyncSignalRGBClient(entry.data[CONF_HOST], entry.data[CONF_PORT])
+    # Initialize client in a thread executor to avoid blocking SSL certificate loading
+    client = await hass.async_add_executor_job(
+        _create_client, entry.data[CONF_HOST], entry.data[CONF_PORT]
+    )
 
     try:
         # Test the connection by getting the current effect
