@@ -17,7 +17,7 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        additional_dependencies: [homeassistant>=2025.3.2]
+        additional_dependencies: [homeassistant>=2025.7.0]
   - repo: local
     hooks:
       - id: pylint

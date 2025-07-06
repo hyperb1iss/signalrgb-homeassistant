@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Release management script for SignalRGB Home Assistant Integration."""
 
-# ruff: noqa: E501,S603,S607,BLE001,T201
+# ruff: noqa: S603, S607, BLE001, T201
 # pylint: disable=broad-exception-caught, line-too-long
 
 import argparse

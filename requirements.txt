@@ -1,4 +1,4 @@
-homeassistant>=2025.3.2
-signalrgb==1.0.0
+homeassistant>=2025.7.1
+signalrgb==1.0.1
 colorama>=0.4.6
-ruff>=0.9.10
+ruff>=0.12.2

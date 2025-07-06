@@ -18,7 +18,7 @@ from custom_components.signalrgb.const import (
     DEFAULT_PORT,
     DOMAIN,
 )
-from custom_components.signalrgb.light import SignalRGBLight
+from custom_components.signalrgb.light import SignalRGBLight, async_setup_entry
 
 # Import fixtures from conftest.py (they're auto-loaded by pytest)
 
@@ -33,8 +33,6 @@ TEST_CONFIG = {
 
 async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
     """Test setting up the entry."""
-    from custom_components.signalrgb.light import async_setup_entry
-
     # Prepare hass.data for the entry
     mock_hass.data[DOMAIN] = {
         mock_config_entry.entry_id: {"client": mock_signalrgb_client}

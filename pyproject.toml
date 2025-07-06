@@ -5,7 +5,7 @@ description = "Home Assistant integration for SignalRGB"
 authors = [{ name = "Stefanie Jane", email = "stef@hyperbliss.tech" }]
 license = { text = "Apache-2.0" }
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13.2"
 keywords = ["home-assistant", "signalrgb", "integration"]
 classifiers = [
     "Framework :: AsyncIO",
@@ -16,23 +16,24 @@ classifiers = [
 
 # Dependencies
 dependencies = [
-    "homeassistant>=2025.3.2",
-    "signalrgb>=1.0.0",
+    "homeassistant>=2025.7.1",
+    "signalrgb>=1.0.1",
     "colorama>=0.4.6",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest==8.3.4",
-    "pytest-cov>=6.0.0",
-    "pytest-asyncio>=0.25.3",
-    "pytest-homeassistant-custom-component>=0.13.223",
-    "mypy>=1.15.0",
-    "pylint>=3.3.5",
-    "pre-commit>=3.7.1",
-    "ruff>=0.9.10",
+    "pytest==8.4.0",
+    "pytest-cov>=6.1.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-homeassistant-custom-component>=0.13.261",
+    "mypy>=1.16.1",
+    "pylint>=3.3.7",
+    "pre-commit>=4.2.0",
+    "ruff>=0.12.2",
     "semver>=3.0.4",
     "wcwidth>=0.2.13",
+    "dbus-fast>=2.44.1",
 ]
 
 [project.urls]
