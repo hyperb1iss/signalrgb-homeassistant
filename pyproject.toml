@@ -1,6 +1,6 @@
 [project]
 name = "signalrgb-homeassistant"
-version = "1.0.0"
+version = "1.0.1"
 description = "Home Assistant integration for SignalRGB"
 authors = [{ name = "Stefanie Jane", email = "stef@hyperbliss.tech" }]
 license = { text = "Apache-2.0" }
