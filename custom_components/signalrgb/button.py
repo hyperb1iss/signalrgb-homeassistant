@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import slugify
 
 from signalrgb import AsyncSignalRGBClient, SignalRGBException
 
@@ -111,7 +112,7 @@ class SignalRGBButton(ButtonEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self.entity_id = f"button.signalrgb_{description.key}_{config_entry.entry_id}"
+        self.entity_id = f"button.signalrgb_{slugify(description.key)}_{slugify(config_entry.entry_id)}"
         LOGGER.debug("SignalRGBButton initialized: %s", self.entity_id)
 
     async def async_press(self) -> None:
