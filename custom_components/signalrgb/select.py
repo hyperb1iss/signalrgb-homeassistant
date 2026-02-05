@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from homeassistant.util import slugify
 
 from signalrgb import AsyncSignalRGBClient, SignalRGBException
 from signalrgb.model import Effect, Layout
@@ -193,7 +194,7 @@ class SignalRGBBaseSelect(CoordinatorEntity, SelectEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self.entity_id = f"select.signalrgb_{select_type}_{config_entry.entry_id}"
+        self.entity_id = f"select.signalrgb_{slugify(select_type)}_{slugify(config_entry.entry_id)}"
         LOGGER.debug(
             "SignalRGB%sSelect initialized: %s", select_type.title(), self.entity_id
         )
