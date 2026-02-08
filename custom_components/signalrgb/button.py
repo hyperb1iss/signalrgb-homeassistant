@@ -80,9 +80,10 @@ async def async_setup_entry(
         )
 
     LOGGER.info(
-        "Adding %s SignalRGB button entities: %s",
+        "Adding %s SignalRGB button entities for entry ID %s: %s: ",
         len(entities),
-        [f"Entry ID: {e._config_entry.entry_id}" for e in entities],
+        entry.entry_id,
+        [e.entity_description.key for e in entities],
     )
     async_add_entities(entities)
 
