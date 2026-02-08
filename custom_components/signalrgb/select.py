@@ -162,7 +162,7 @@ async def async_setup_entry(
     )
 
     LOGGER.info(
-        "Adding %s SignalRGB select entities for entry ID: %s: ",
+        "Adding %s SignalRGB select entities for entry ID: %s: %s",
         len(entities),
         entry.entry_id,
         [e._select_type for e in entities],
