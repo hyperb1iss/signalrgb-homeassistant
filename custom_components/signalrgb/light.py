@@ -119,7 +119,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._retry_count: int = 0
         self._max_retries: int = 3
         self._refresh_task: asyncio.Task[None] | None = None
-        LOGGER.debug("SignalRGBLight initialized: %s", self.entity_id)
+        LOGGER.debug("SignalRGBLight initialized for entry: %s", config_entry.entry_id)
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
