@@ -24,7 +24,6 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import slugify
 
 from signalrgb import AsyncSignalRGBClient, SignalRGBException
 from signalrgb.model import Effect
@@ -82,7 +81,7 @@ async def async_setup_entry(
     await coordinator.async_refresh()
 
     light = SignalRGBLight(coordinator, client, entry)
-    LOGGER.info("Adding SignalRGB light entity: %s", light.entity_id)
+    LOGGER.info("Adding SignalRGB light for entry: %s", entry.entry_id)
     async_add_entities([light], update_before_add=True)
 
 
@@ -113,7 +112,6 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             model=MODEL,
         )
         self._effect_list: list[str] = []
-        self.entity_id = f"light.signalrgb_{slugify(config_entry.entry_id)}"
         self._current_effect: Effect | None = None
         self._is_on: bool = False
         self._brightness: int = 0  # This is now 0-100
