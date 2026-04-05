@@ -83,9 +83,12 @@ class TestSignalRGBButton:
         mock_coordinator.async_set_updated_data = MagicMock()
 
         # Mock the client's get methods that are called during direct refresh
-        mock_button._client.get_current_effect = AsyncMock()
-        mock_button._client.get_enabled = AsyncMock(return_value=True)
-        mock_button._client.get_brightness = AsyncMock(return_value=100)
+        mock_state = MagicMock()
+        mock_state.id = "effect_1"
+        mock_state.attributes.enabled = True
+        mock_state.attributes.global_brightness = 100
+        mock_button._client.get_current_state = AsyncMock(return_value=mock_state)
+        mock_button._client.get_effect = AsyncMock()
 
         mock_hass.data[DOMAIN] = {
             mock_button._config_entry.entry_id: {
@@ -100,10 +103,9 @@ class TestSignalRGBButton:
         # Verify the action was called directly (no executor job)
         mock_button._client.apply_next_effect.assert_called_once()
 
-        # Verify the direct state fetching was called
-        mock_button._client.get_current_effect.assert_called_once()
-        mock_button._client.get_enabled.assert_called_once()
-        mock_button._client.get_brightness.assert_called_once()
+        # Verify the direct state fetching was called (single combined state call)
+        mock_button._client.get_current_state.assert_called_once()
+        mock_button._client.get_effect.assert_called_once_with("effect_1")
 
         # Verify coordinator was updated directly
         mock_coordinator.async_set_updated_data.assert_called_once()
@@ -165,9 +167,12 @@ class TestSignalRGBButton:
         mock_coordinator.async_set_updated_data = MagicMock()
 
         # Mock the client's get methods that are called during direct refresh
-        mock_signalrgb_client.get_current_effect = AsyncMock()
-        mock_signalrgb_client.get_enabled = AsyncMock(return_value=True)
-        mock_signalrgb_client.get_brightness = AsyncMock(return_value=100)
+        mock_state = MagicMock()
+        mock_state.id = "effect_1"
+        mock_state.attributes.enabled = True
+        mock_state.attributes.global_brightness = 100
+        mock_signalrgb_client.get_current_state = AsyncMock(return_value=mock_state)
+        mock_signalrgb_client.get_effect = AsyncMock()
 
         # Set up hass.data
         mock_hass.data[DOMAIN] = {
@@ -193,9 +198,8 @@ class TestSignalRGBButton:
         # Reset mocks
         mock_signalrgb_client.apply_next_effect.reset_mock()
         mock_coordinator.async_set_updated_data.reset_mock()
-        mock_signalrgb_client.get_current_effect.reset_mock()
-        mock_signalrgb_client.get_enabled.reset_mock()
-        mock_signalrgb_client.get_brightness.reset_mock()
+        mock_signalrgb_client.get_current_state.reset_mock()
+        mock_signalrgb_client.get_effect.reset_mock()
 
         # Create and test the previous effect button
         prev_button_desc = SignalRGBButtonEntityDescription(
@@ -213,9 +217,8 @@ class TestSignalRGBButton:
         # Reset mocks
         mock_signalrgb_client.apply_previous_effect.reset_mock()
         mock_coordinator.async_set_updated_data.reset_mock()
-        mock_signalrgb_client.get_current_effect.reset_mock()
-        mock_signalrgb_client.get_enabled.reset_mock()
-        mock_signalrgb_client.get_brightness.reset_mock()
+        mock_signalrgb_client.get_current_state.reset_mock()
+        mock_signalrgb_client.get_effect.reset_mock()
 
         # Create and test the random effect button
         random_button_desc = SignalRGBButtonEntityDescription(

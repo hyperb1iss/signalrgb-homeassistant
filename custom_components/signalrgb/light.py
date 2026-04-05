@@ -45,22 +45,27 @@ async def async_setup_entry(
     client: AsyncSignalRGBClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
     async def async_update_data() -> dict[str, Any]:
-        """Fetch data from API endpoint."""
+        """Fetch data from API endpoint.
+
+        Uses get_current_state() to retrieve enabled, brightness, and the
+        current effect ID in a single API call, then resolves the effect
+        details with one additional call — halving the polling cost versus
+        calling get_current_effect + get_enabled + get_brightness separately.
+        """
         try:
             LOGGER.debug("Fetching current state from SignalRGB API")
-            current_effect = await client.get_current_effect()
-            is_on = await client.get_enabled()
-            brightness = await client.get_brightness()
+            state = await client.get_current_state()
+            current_effect = await client.get_effect(state.id)
             LOGGER.debug(
                 "API Response - Effect: %s, Is On: %s, Brightness: %s",
                 current_effect.attributes.name if current_effect else "None",
-                is_on,
-                brightness,
+                state.attributes.enabled,
+                state.attributes.global_brightness,
             )
             return {
                 "current_effect": current_effect,
-                "is_on": is_on,
-                "brightness": brightness,
+                "is_on": state.attributes.enabled,
+                "brightness": state.attributes.global_brightness,
             }
         except SignalRGBException as err:
             LOGGER.error("Error communicating with SignalRGB API: %s", err)
@@ -279,17 +284,16 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         # Directly fetch the current state from the API for immediate feedback
         try:
             LOGGER.debug("Directly fetching current state after effect change")
-            current_effect = await self._client.get_current_effect()
-            is_on = await self._client.get_enabled()
-            brightness = await self._client.get_brightness()
+            state = await self._client.get_current_state()
+            current_effect = await self._client.get_effect(state.id)
 
             # Update our coordinator data directly
             if self.coordinator.data:
                 self.coordinator.data.update(
                     {
                         "current_effect": current_effect,
-                        "is_on": is_on,
-                        "brightness": brightness,
+                        "is_on": state.attributes.enabled,
+                        "brightness": state.attributes.global_brightness,
                     }
                 )
                 # Force an update to all entities using this coordinator

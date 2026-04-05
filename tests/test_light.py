@@ -40,10 +40,14 @@ async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_cl
     mock_effect = MagicMock()
     mock_effect.attributes.name = "Test Effect"
 
-    # Set return values for direct async calls
-    mock_signalrgb_client.get_current_effect.return_value = mock_effect
-    mock_signalrgb_client.get_enabled.return_value = True
-    mock_signalrgb_client.get_brightness.return_value = 75
+    # Set return values for direct async calls — coordinator uses the combined
+    # get_current_state() call, then get_effect() to resolve effect details.
+    mock_state = MagicMock()
+    mock_state.id = "effect_1"
+    mock_state.attributes.enabled = True
+    mock_state.attributes.global_brightness = 75
+    mock_signalrgb_client.get_current_state.return_value = mock_state
+    mock_signalrgb_client.get_effect.return_value = mock_effect
 
     # Call async_setup_entry and wait for the coordinator's first refresh
     entities = []

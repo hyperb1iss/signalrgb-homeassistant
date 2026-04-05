@@ -148,9 +148,8 @@ class SignalRGBButton(ButtonEntity):
             # Directly fetch the current state from the API
             try:
                 LOGGER.debug("Directly fetching current state after button press")
-                current_effect = await self._client.get_current_effect()
-                is_on = await self._client.get_enabled()
-                brightness = await self._client.get_brightness()
+                state = await self._client.get_current_state()
+                current_effect = await self._client.get_effect(state.id)
 
                 # If we have a light coordinator, update its data directly
                 if "coordinator" in entry_data:
@@ -158,8 +157,8 @@ class SignalRGBButton(ButtonEntity):
                     LOGGER.debug("Updating light coordinator data directly")
                     coordinator.data = {
                         "current_effect": current_effect,
-                        "is_on": is_on,
-                        "brightness": brightness,
+                        "is_on": state.attributes.enabled,
+                        "brightness": state.attributes.global_brightness,
                     }
                     # Force an update to all entities using this coordinator
                     coordinator.async_set_updated_data(coordinator.data)

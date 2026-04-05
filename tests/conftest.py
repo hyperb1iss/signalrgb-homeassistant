@@ -36,6 +36,8 @@ def mock_signalrgb_client():
         client = mock_client.return_value
         # Use AsyncMock for async methods
         client.get_current_effect = AsyncMock()
+        client.get_current_state = AsyncMock()
+        client.get_effect = AsyncMock()
         client.get_effects = AsyncMock()
         client.apply_effect_by_name = AsyncMock()
         client.get_layouts = AsyncMock()
