@@ -10,7 +10,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 import homeassistant.helpers.config_validation as cv
 
-from signalrgb import AsyncSignalRGBClient, SignalRGBException
+from signalrgb import (
+    APIError,
+    AsyncSignalRGBClient,
+    ConnectionError as SignalRGBConnectionError,
+    SignalRGBException,
+)
 
 from .const import DOMAIN, LOGGER, PLATFORMS
 
@@ -39,16 +44,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     try:
-        # Test the connection by getting the current effect
-        await client.get_current_effect()
-    except SignalRGBException as err:
-        LOGGER.error(
-            "Failed to connect to SignalRGB at %s:%s: %s",
+        # Test the connection by fetching current state
+        await client.get_current_state()
+    except SignalRGBConnectionError as err:
+        LOGGER.warning(
+            "Cannot reach SignalRGB at %s:%s — will retry: %s",
             entry.data[CONF_HOST],
             entry.data[CONF_PORT],
             err,
         )
-        # Make sure to close the client on error
+        await client.aclose()
+        raise ConfigEntryNotReady(f"Cannot connect to SignalRGB: {err}") from err
+    except APIError as err:
+        LOGGER.error(
+            "SignalRGB API error at %s:%s [%s]: %s",
+            entry.data[CONF_HOST],
+            entry.data[CONF_PORT],
+            err.code,
+            err.detail or err,
+        )
+        await client.aclose()
+        raise ConfigEntryNotReady(f"SignalRGB API error: {err}") from err
+    except SignalRGBException as err:
+        LOGGER.error(
+            "Unexpected SignalRGB error at %s:%s: %s",
+            entry.data[CONF_HOST],
+            entry.data[CONF_PORT],
+            err,
+        )
         await client.aclose()
         raise ConfigEntryNotReady from err
 

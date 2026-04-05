@@ -60,7 +60,7 @@ async def test_setup_entry_failed(mock_hass, mock_config_entry, mock_httpx_clien
 
     # Create a mock client that will raise an exception
     mock_client = AsyncMock()
-    mock_client.get_current_effect.side_effect = error
+    mock_client.get_current_state.side_effect = error
     mock_client.aclose = AsyncMock()
 
     # Set up the mock_hass to return our mock client

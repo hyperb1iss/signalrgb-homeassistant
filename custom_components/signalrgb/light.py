@@ -23,10 +23,17 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
+    UpdateFailed,
 )
 from signalrgb.model import Effect
 
-from signalrgb import AsyncSignalRGBClient, SignalRGBException
+from signalrgb import (
+    APIError,
+    AsyncSignalRGBClient,
+    ConnectionError as SignalRGBConnectionError,
+    NotFoundError,
+    SignalRGBException,
+)
 
 from .const import (
     DOMAIN,
@@ -67,9 +74,14 @@ async def async_setup_entry(
                 "is_on": state.attributes.enabled,
                 "brightness": state.attributes.global_brightness,
             }
+        except SignalRGBConnectionError as err:
+            raise UpdateFailed(f"Cannot reach SignalRGB at {entry.data['host']}: {err}") from err
+        except NotFoundError as err:
+            raise UpdateFailed(f"SignalRGB resource not found: {err}") from err
+        except APIError as err:
+            raise UpdateFailed(f"SignalRGB API error [{err.code}]: {err.detail or err}") from err
         except SignalRGBException as err:
-            LOGGER.error("Error communicating with SignalRGB API: %s", err)
-            raise HomeAssistantError(f"Error communicating with API: {err}") from err
+            raise UpdateFailed(f"Unexpected SignalRGB error: {err}") from err
 
     coordinator = DataUpdateCoordinator(
         hass,
