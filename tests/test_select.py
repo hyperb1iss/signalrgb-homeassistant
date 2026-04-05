@@ -22,9 +22,7 @@ from custom_components.signalrgb.select import (
 async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
     """Test setting up the entry with layouts and presets."""
     # Prepare hass.data for the entry
-    mock_hass.data[DOMAIN] = {
-        mock_config_entry.entry_id: {"client": mock_signalrgb_client}
-    }
+    mock_hass.data[DOMAIN] = {mock_config_entry.entry_id: {"client": mock_signalrgb_client}}
 
     # Mock get_layouts and current_layout for layout coordinator
     mock_layout = MagicMock()
@@ -131,9 +129,7 @@ class TestSignalRGBLayoutSelect:
         mock_layout_select.coordinator.async_set_updated_data = MagicMock()
 
         # Mock the client's get methods that are called during direct refresh
-        mock_layout_select._client.get_current_layout = AsyncMock(
-            return_value=mock_layout2
-        )
+        mock_layout_select._client.get_current_layout = AsyncMock(return_value=mock_layout2)
 
         # Set up mock coordinator in hass.data
         mock_coordinator = MagicMock()

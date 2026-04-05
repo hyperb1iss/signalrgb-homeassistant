@@ -24,9 +24,7 @@ from signalrgb import SignalRGBException
 async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
     """Test setting up the entry with button entities."""
     # Prepare hass.data for the entry
-    mock_hass.data[DOMAIN] = {
-        mock_config_entry.entry_id: {"client": mock_signalrgb_client}
-    }
+    mock_hass.data[DOMAIN] = {mock_config_entry.entry_id: {"client": mock_signalrgb_client}}
 
     # Call async_setup_entry
     entities = []
@@ -54,9 +52,7 @@ def mock_button_description():
 
 
 @pytest.fixture
-def mock_button(
-    mock_hass, mock_signalrgb_client, mock_config_entry, mock_button_description
-):
+def mock_button(mock_hass, mock_signalrgb_client, mock_config_entry, mock_button_description):
     """Create a mock button entity."""
     button = SignalRGBButton(
         mock_signalrgb_client,
@@ -64,9 +60,7 @@ def mock_button(
         mock_button_description,
     )
     button.hass = mock_hass
-    button.entity_id = (
-        f"button.signalrgb_{NEXT_EFFECT_BUTTON}_{mock_config_entry.entry_id}"
-    )
+    button.entity_id = f"button.signalrgb_{NEXT_EFFECT_BUTTON}_{mock_config_entry.entry_id}"
     return button
 
 
@@ -161,9 +155,7 @@ class TestSignalRGBButton:
                 # Press the button and expect an error
                 await mock_button.async_press()
 
-    async def test_all_button_types(
-        self, mock_hass, mock_signalrgb_client, mock_config_entry
-    ):
+    async def test_all_button_types(self, mock_hass, mock_signalrgb_client, mock_config_entry):
         """Test that all button types call the correct methods."""
         # Create a coordinator mock
         mock_coordinator = MagicMock()
@@ -191,9 +183,7 @@ class TestSignalRGBButton:
             name="Next Effect",
             action_method="apply_next_effect",
         )
-        next_button = SignalRGBButton(
-            mock_signalrgb_client, mock_config_entry, next_button_desc
-        )
+        next_button = SignalRGBButton(mock_signalrgb_client, mock_config_entry, next_button_desc)
         next_button.hass = mock_hass
 
         await next_button.async_press()
@@ -213,9 +203,7 @@ class TestSignalRGBButton:
             name="Previous Effect",
             action_method="apply_previous_effect",
         )
-        prev_button = SignalRGBButton(
-            mock_signalrgb_client, mock_config_entry, prev_button_desc
-        )
+        prev_button = SignalRGBButton(mock_signalrgb_client, mock_config_entry, prev_button_desc)
         prev_button.hass = mock_hass
 
         await prev_button.async_press()

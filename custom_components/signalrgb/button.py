@@ -173,9 +173,7 @@ class SignalRGBButton(ButtonEntity):
                         await item.async_request_refresh()
 
             except SignalRGBException as refresh_err:
-                LOGGER.warning(
-                    "Error refreshing state after button press: %s", refresh_err
-                )
+                LOGGER.warning("Error refreshing state after button press: %s", refresh_err)
                 # Fall back to regular coordinator refresh if direct update fails
                 if "coordinator" in entry_data:
                     await entry_data["coordinator"].async_request_refresh()

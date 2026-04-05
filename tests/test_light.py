@@ -34,9 +34,7 @@ TEST_CONFIG = {
 async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
     """Test setting up the entry."""
     # Prepare hass.data for the entry
-    mock_hass.data[DOMAIN] = {
-        mock_config_entry.entry_id: {"client": mock_signalrgb_client}
-    }
+    mock_hass.data[DOMAIN] = {mock_config_entry.entry_id: {"client": mock_signalrgb_client}}
 
     # Mock the async client method results for update
     mock_effect = MagicMock()
@@ -113,9 +111,7 @@ class TestSignalRGBLight:
 
         assert mock_light._is_on is True
         assert mock_light._brightness == 50
-        assert (
-            mock_light.async_write_ha_state.call_count == 2
-        )  # Once for on, once for brightness
+        assert mock_light.async_write_ha_state.call_count == 2  # Once for on, once for brightness
 
         # Verify refresh was scheduled
         mock_refresh.assert_called_once()
@@ -142,9 +138,7 @@ class TestSignalRGBLight:
 
         assert mock_light._is_on is True
         assert mock_light._current_effect == mock_effect_obj
-        assert (
-            mock_light.async_write_ha_state.call_count == 2
-        )  # Once for on, once for effect
+        assert mock_light.async_write_ha_state.call_count == 2  # Once for on, once for effect
 
         # Verify refresh was scheduled
         mock_refresh.assert_called_once()

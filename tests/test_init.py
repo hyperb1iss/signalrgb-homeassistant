@@ -4,22 +4,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.exceptions import ConfigEntryNotReady
 import pytest
+from signalrgb.exceptions import SignalRGBException
 
 from custom_components.signalrgb import (
     async_setup_entry,
     async_unload_entry,
 )
 from custom_components.signalrgb.const import DOMAIN, PLATFORMS
-from signalrgb.exceptions import SignalRGBException
 
 
 @pytest.fixture
 def mock_get_current_effect():
     """Mock the get_current_effect method to avoid HTTP calls."""
     # Instead of mocking _get_current_state, we should mock get_current_effect directly
-    with patch(
-        "signalrgb.AsyncSignalRGBClient.get_current_effect", new_callable=AsyncMock
-    ) as mock:
+    with patch("signalrgb.AsyncSignalRGBClient.get_current_effect", new_callable=AsyncMock) as mock:
         # Create a mock effect with the right attributes
         mock_effect = MagicMock()
         mock_effect.attributes.name = "Test Effect"
@@ -97,8 +95,6 @@ async def test_unload_entry(mock_hass, mock_config_entry, mock_signalrgb_client)
     # Verify results
     assert result is True
     assert mock_config_entry.entry_id not in mock_hass.data[DOMAIN]
-    mock_hass.config_entries.async_unload_platforms.assert_called_with(
-        mock_config_entry, PLATFORMS
-    )
+    mock_hass.config_entries.async_unload_platforms.assert_called_with(mock_config_entry, PLATFORMS)
     # Verify the client was properly closed
     mock_signalrgb_client.aclose.assert_called_once()

@@ -19,9 +19,9 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from signalrgb.model import Effect, Layout
 
 from signalrgb import AsyncSignalRGBClient, SignalRGBException
-from signalrgb.model import Effect, Layout
 
 from .const import (
     DOMAIN,
@@ -394,9 +394,7 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
             # Update current effect - this may have changed
             new_effect = data["current_effect"]
             effect_changed = not self._current_effect or (
-                new_effect
-                and self._current_effect
-                and new_effect.id != self._current_effect.id
+                new_effect and self._current_effect and new_effect.id != self._current_effect.id
             )
 
             self._current_effect = new_effect
@@ -412,9 +410,7 @@ class SignalRGBPresetSelect(SignalRGBBaseSelect):
 
             # Reset current preset when effect changes or if it's not set
             if effect_changed or self._current_preset is None:
-                LOGGER.debug(
-                    "Effect changed or preset not set, setting to first preset"
-                )
+                LOGGER.debug("Effect changed or preset not set, setting to first preset")
                 if self._presets:
                     self._current_preset = self._presets[0]
                 else:

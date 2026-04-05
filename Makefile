@@ -1,4 +1,4 @@
-.PHONY: install test lint format check clean
+.PHONY: install test coverage lint typecheck format check fix update clean
 
 install:
 	uv sync
@@ -6,19 +6,24 @@ install:
 test:
 	uv run pytest
 
+coverage:
+	uv run pytest --cov --cov-report=term-missing --cov-report=html
+
 lint:
-	uv run pylint custom_components tests
-	uv run mypy custom_components tests
-	uv run ruff check
+	uv run ruff check custom_components tests
+	uv run ruff format --check custom_components tests
+
+typecheck:
+	uv run ty check
 
 format:
-	uv run ruff format
+	uv run ruff format custom_components tests
 
-check:
-	uv run ruff format --check
-	uv run pylint custom_components
-	uv run mypy custom_components
-	uv run ruff check
+check: lint typecheck test
+
+fix:
+	uv run ruff check --fix custom_components tests
+	uv run ruff format custom_components tests
 
 update:
 	@./scripts/release.py update-hass
@@ -28,3 +33,4 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 	find . -type f -name "*~" -delete
+	rm -rf .coverage htmlcov dist build

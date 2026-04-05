@@ -5,12 +5,12 @@ from unittest.mock import patch
 from homeassistant import config_entries, data_entry_flow
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from custom_components.signalrgb.const import DOMAIN
 from signalrgb.exceptions import (
     ConnectionError as SignalRGBConnectionError,
     SignalRGBException,
 )
+
+from custom_components.signalrgb.const import DOMAIN
 
 
 # This fixture bypasses the actual setup of the integration

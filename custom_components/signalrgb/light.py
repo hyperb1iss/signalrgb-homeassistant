@@ -24,9 +24,9 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from signalrgb.model import Effect
 
 from signalrgb import AsyncSignalRGBClient, SignalRGBException
-from signalrgb.model import Effect
 
 from .const import (
     DOMAIN,
@@ -151,9 +151,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
     @property
     def effect_list(self) -> list[str]:
         """Return the list of supported effects."""
-        LOGGER.debug(
-            "Getting effect list for %s: %s", self.entity_id, self._effect_list
-        )
+        LOGGER.debug("Getting effect list for %s: %s", self.entity_id, self._effect_list)
         return self._effect_list
 
     @property
@@ -161,9 +159,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         """Return entity specific state attributes."""
         LOGGER.debug("Getting extra state attributes for %s", self.entity_id)
         if not self.is_on or not self._current_effect:
-            LOGGER.debug(
-                "Light is off or no current effect, returning empty attributes"
-            )
+            LOGGER.debug("Light is off or no current effect, returning empty attributes")
             return {}
 
         effect = self._current_effect
@@ -272,9 +268,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
     async def _delayed_refresh(self) -> None:
         """Perform a delayed refresh and retry if necessary."""
         # Use a much shorter delay for better responsiveness
-        await asyncio.sleep(
-            0.2
-        )  # Wait for 0.2 seconds before refreshing (down from 2 seconds)
+        await asyncio.sleep(0.2)  # Wait for 0.2 seconds before refreshing (down from 2 seconds)
 
         # Check if task has been cancelled while sleeping
         current_task = asyncio.current_task()
@@ -304,17 +298,14 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             # Also refresh any other coordinators (particularly the effect/preset coordinator)
             entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
             for key, item in entry_data.items():
-                if key not in {"client", "coordinator"} and hasattr(
-                    item, "async_request_refresh"
-                ):
+                if key not in {"client", "coordinator"} and hasattr(item, "async_request_refresh"):
                     LOGGER.debug("Refreshing additional coordinator: %s", key)
                     await item.async_request_refresh()
 
             # Check if the requested effect was applied correctly
             if self._requested_effect and self.effect != self._requested_effect:
                 LOGGER.warning(
-                    "Applied effect doesn't match requested effect. "
-                    "Requested: %s, Applied: %s",
+                    "Applied effect doesn't match requested effect. Requested: %s, Applied: %s",
                     self._requested_effect,
                     self.effect,
                 )
@@ -344,9 +335,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             # Also refresh any other coordinators
             entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
             for key, item in entry_data.items():
-                if key not in {"client", "coordinator"} and hasattr(
-                    item, "async_request_refresh"
-                ):
+                if key not in {"client", "coordinator"} and hasattr(item, "async_request_refresh"):
                     LOGGER.debug("Refreshing additional coordinator: %s", key)
                     await item.async_request_refresh()
 
@@ -398,19 +387,14 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
                 not self._current_effect or new_effect.id != self._current_effect.id
             ):
                 self._current_effect = new_effect
-                if (
-                    self._requested_effect
-                    and new_effect.attributes.name != self._requested_effect
-                ):
+                if self._requested_effect and new_effect.attributes.name != self._requested_effect:
                     LOGGER.warning(
-                        "Applied effect doesn't match requested effect. "
-                        "Requested: %s, Applied: %s",
+                        "Applied effect doesn't match requested effect. Requested: %s, Applied: %s",
                         self._requested_effect,
                         new_effect.attributes.name,
                     )
                 elif (
-                    self._requested_effect
-                    and new_effect.attributes.name == self._requested_effect
+                    self._requested_effect and new_effect.attributes.name == self._requested_effect
                 ):
                     LOGGER.info(
                         "Requested effect %s successfully applied",
@@ -421,9 +405,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
 
             LOGGER.debug(
                 "Updated state - Effect: %s, Is On: %s, Brightness: %s",
-                self._current_effect.attributes.name
-                if self._current_effect
-                else "None",
+                self._current_effect.attributes.name if self._current_effect else "None",
                 self._is_on,
                 self._brightness,
             )

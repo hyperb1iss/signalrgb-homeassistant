@@ -75,8 +75,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
         LOGGER.info("SignalRGB integration unloaded for %s", entry.data[CONF_HOST])
     else:
-        LOGGER.warning(
-            "Failed to unload SignalRGB integration for %s", entry.data[CONF_HOST]
-        )
+        LOGGER.warning("Failed to unload SignalRGB integration for %s", entry.data[CONF_HOST])
 
     return bool(unload_ok)
