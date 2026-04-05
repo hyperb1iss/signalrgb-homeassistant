@@ -81,7 +81,7 @@ async def async_setup_entry(
     await coordinator.async_refresh()
 
     light = SignalRGBLight(coordinator, client, entry)
-    LOGGER.info("Adding SignalRGB light entity: %s", light.entity_id)
+    LOGGER.info("Adding SignalRGB light for entry: %s", entry.entry_id)
     async_add_entities([light], update_before_add=True)
 
 
@@ -112,7 +112,6 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
             model=MODEL,
         )
         self._effect_list: list[str] = []
-        self.entity_id = f"light.signalrgb_{config_entry.entry_id}"
         self._current_effect: Effect | None = None
         self._is_on: bool = False
         self._brightness: int = 0  # This is now 0-100
@@ -120,7 +119,7 @@ class SignalRGBLight(CoordinatorEntity, LightEntity):
         self._retry_count: int = 0
         self._max_retries: int = 3
         self._refresh_task: asyncio.Task[None] | None = None
-        LOGGER.debug("SignalRGBLight initialized: %s", self.entity_id)
+        LOGGER.debug("SignalRGBLight initialized for entry: %s", config_entry.entry_id)
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""

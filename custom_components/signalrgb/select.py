@@ -162,9 +162,10 @@ async def async_setup_entry(
     )
 
     LOGGER.info(
-        "Adding %s SignalRGB select entities: %s",
+        "Adding %s SignalRGB select entities for entry ID: %s: %s",
         len(entities),
-        [e.entity_id for e in entities],
+        entry.entry_id,
+        [type(e).__name__ for e in entities],
     )
     async_add_entities(entities)
 
@@ -193,9 +194,10 @@ class SignalRGBBaseSelect(CoordinatorEntity, SelectEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self.entity_id = f"select.signalrgb_{select_type}_{config_entry.entry_id}"
         LOGGER.debug(
-            "SignalRGB%sSelect initialized: %s", select_type.title(), self.entity_id
+            "SignalRGBSelect %s initialized for entry: %s",
+            select_type.title(),
+            config_entry.entry_id,
         )
 
 

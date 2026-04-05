@@ -80,9 +80,10 @@ async def async_setup_entry(
         )
 
     LOGGER.info(
-        "Adding %s SignalRGB button entities: %s",
+        "Adding %s SignalRGB button entities for entry ID %s: %s",
         len(entities),
-        [e.entity_id for e in entities],
+        entry.entry_id,
+        [e.entity_description.key for e in entities],
     )
     async_add_entities(entities)
 
@@ -111,12 +112,19 @@ class SignalRGBButton(ButtonEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self.entity_id = f"button.signalrgb_{description.key}_{config_entry.entry_id}"
-        LOGGER.debug("SignalRGBButton initialized: %s", self.entity_id)
+        LOGGER.debug(
+            "SignalRGBButton %s initialized for entry: %s",
+            description.key,
+            config_entry.entry_id,
+        )
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        LOGGER.debug("Button pressed: %s", self.entity_id)
+        LOGGER.debug(
+            "Button pressed: %s for entry: %s",
+            self.entity_description.key,
+            self._config_entry.entry_id,
+        )
         method_name = self.entity_description.action_method
 
         if not method_name or not hasattr(self._client, method_name):
