@@ -1,28 +1,37 @@
+# Pre-commit hooks for signalrgb-homeassistant
+# Install: uv run pre-commit install
+# Run manually: uv run pre-commit run --all-files
+# Update: uv run pre-commit autoupdate
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
-      - id: check-yaml
-      - id: end-of-file-fixer
       - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: v0.15.9
     hooks:
       - id: ruff
-        args:
-          - --fix
+        args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-        files: ^((homeassistant|pylint|script|tests)/.+)?[^/]+\.(py|pyi)$
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [homeassistant>=2025.7.0]
+
   - repo: local
     hooks:
-      - id: pylint
-        name: pylint
-        entry: uv run pylint
+      - id: ty
+        name: ty
+        entry: uv run ty check
         language: system
         types: [python]
-        args: [--rcfile=pyproject.toml]
+        pass_filenames: false

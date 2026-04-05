@@ -10,20 +10,20 @@ coverage:
 	uv run pytest --cov --cov-report=term-missing --cov-report=html
 
 lint:
-	uv run ruff check custom_components tests
-	uv run ruff format --check custom_components tests
+	uv run ruff check custom_components tests scripts
+	uv run ruff format --check custom_components tests scripts
 
 typecheck:
 	uv run ty check
 
 format:
-	uv run ruff format custom_components tests
+	uv run ruff format custom_components tests scripts
 
 check: lint typecheck test
 
 fix:
-	uv run ruff check --fix custom_components tests
-	uv run ruff format custom_components tests
+	uv run ruff check --fix custom_components tests scripts
+	uv run ruff format custom_components tests scripts
 
 update:
 	@./scripts/release.py update-hass

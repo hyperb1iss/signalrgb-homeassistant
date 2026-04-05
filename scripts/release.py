@@ -25,9 +25,7 @@ PROJECT_NAME = "SignalRGB Home Assistant Integration"
 REPO_NAME = "hyperb1iss/signalrgb-homeassistant"
 PROJECT_LINK = f"https://github.com/{REPO_NAME}"
 ISSUE_TRACKER = f"{PROJECT_LINK}/issues"
-HASS_CONFIG_DIR = os.getenv(
-    "HASS_CONFIG_DIR", os.path.expanduser("~/dev/ha_core/config")
-)
+HASS_CONFIG_DIR = os.getenv("HASS_CONFIG_DIR", os.path.expanduser("~/dev/ha_core/config"))
 CUSTOM_COMPONENTS_DIR = os.path.join(HASS_CONFIG_DIR, "custom_components")
 
 # ANSI Color Constants
@@ -104,8 +102,7 @@ def strip_ansi(text: str) -> str:
 def apply_gradient(text: str, gradient: list[str], line_number: int) -> str:
     """Apply gradient colors diagonally to text."""
     return "".join(
-        f"{gradient[(i + line_number) % len(gradient)]}{char}"
-        for i, char in enumerate(text)
+        f"{gradient[(i + line_number) % len(gradient)]}{char}" for i, char in enumerate(text)
     )
 
 
@@ -157,9 +154,7 @@ def create_banner() -> str:
                 f"{COLOR_STAR}∴｡　　･ﾟ*｡☆ {release_manager_text}{COLOR_STAR} ☆｡*ﾟ･　 ｡∴",
                 banner_width,
             ),
-            center_text(
-                f"{COLOR_STAR}･ ｡ ☆ ∴｡　　･ﾟ*｡★･ ∴｡　　･ﾟ*｡☆ ･ ｡ ☆ ∴｡", banner_width
-            ),
+            center_text(f"{COLOR_STAR}･ ｡ ☆ ∴｡　　･ﾟ*｡★･ ∴｡　　･ﾟ*｡☆ ･ ｡ ☆ ∴｡", banner_width),
         ]
     )
 
@@ -209,9 +204,7 @@ def update_manifest(new_version: str) -> None:
 
         # Create an ordered manifest with domain and name first, followed by other items
         base_items = [("domain", manifest["domain"]), ("name", manifest["name"])]
-        other_items = sorted(
-            [(k, v) for k, v in manifest.items() if k not in ["domain", "name"]]
-        )
+        other_items = sorted([(k, v) for k, v in manifest.items() if k not in ["domain", "name"]])
         ordered_manifest = OrderedDict([*base_items, *other_items])
 
         with open(manifest_path, "w", encoding="utf-8") as file:
@@ -275,12 +268,8 @@ def commit_and_push(version: str) -> None:
     try:
         # All the subprocess calls are safe but the linter doesn't know that
         # We're only using fixed strings and the version which we validate
-        subprocess.run(
-            ["git", "add", "custom_components", "pyproject.toml"], check=True
-        )
-        subprocess.run(
-            ["git", "commit", "-m", f":rocket: Release version {version}"], check=True
-        )
+        subprocess.run(["git", "add", "custom_components", "pyproject.toml"], check=True)
+        subprocess.run(["git", "commit", "-m", f":rocket: Release version {version}"], check=True)
         subprocess.run(["git", "push"], check=True)
         subprocess.run(["git", "tag", f"v{version}"], check=True)
         subprocess.run(["git", "push", "--tags"], check=True)
@@ -317,12 +306,8 @@ def confirm_release(new_version: str) -> bool:
 
 def main() -> None:
     """Main function to handle command-line arguments and execute the appropriate commands."""
-    parser = argparse.ArgumentParser(
-        description=f"Release management for {PROJECT_NAME}"
-    )
-    parser.add_argument(
-        "command", choices=["update-hass", "release"], help="Command to run"
-    )
+    parser = argparse.ArgumentParser(description=f"Release management for {PROJECT_NAME}")
+    parser.add_argument("command", choices=["update-hass", "release"], help="Command to run")
     parser.add_argument(
         "version",
         nargs="?",
@@ -365,9 +350,7 @@ def main() -> None:
         print_success(
             f"\n🎉✨ {PROJECT_NAME} v{args.version} has been successfully prepared for release! ✨🎉"
         )
-        print_colored(
-            "Note: The GitHub release will be created by CI.", COLOR_BUILD_SUCCESS
-        )
+        print_colored("Note: The GitHub release will be created by CI.", COLOR_BUILD_SUCCESS)
 
 
 if __name__ == "__main__":
