@@ -16,7 +16,7 @@
 
 <p>
   <a href="https://github.com/hacs/integration">
-    <img src="https://img.shields.io/badge/HACS-Custom-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white" alt="HACS Custom">
+    <img src="https://img.shields.io/badge/HACS-Default-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white" alt="HACS Default">
   </a>
   <a href="https://www.home-assistant.io">
     <img src="https://img.shields.io/badge/Home%20Assistant-2026.4+-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white" alt="Home Assistant 2026.4+">
@@ -65,14 +65,12 @@ Want more features? Vote for this [SignalRGB feature request](https://forum.sign
 
 ### HACS (Recommended)
 
-This integration isn't in the default HACS repository yet, so add it as a custom repository:
+This integration is in the [HACS](https://hacs.xyz/) default repository:
 
-1. Open HACS in Home Assistant
-2. Click the three-dot menu → **Custom repositories**
-3. Repository: `hyperb1iss/signalrgb-homeassistant`
-4. Category: **Integration**
-5. Click **Add**, then search for **SignalRGB** and install
-6. Restart Home Assistant
+1. Open **HACS** in Home Assistant
+2. Go to **Integrations** and click the **+** button
+3. Search for **SignalRGB** and select it
+4. Click **Download** and restart Home Assistant
 
 ### Manual Installation
 
