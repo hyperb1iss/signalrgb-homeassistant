@@ -1,0 +1,12 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Create GitHub Release
+    uses: hyperb1iss/shared-workflows/.github/workflows/github-release.yml@v1
+    secrets: inherit
