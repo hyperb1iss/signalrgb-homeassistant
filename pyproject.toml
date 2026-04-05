@@ -18,7 +18,7 @@ classifiers = [
 # Dependencies
 dependencies = [
     "homeassistant>=2026.4.0",
-    "signalrgb>=1.0.1",
+    "signalrgb>=1.0.2",
     "colorama>=0.4.6",
 ]
 

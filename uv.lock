@@ -2194,22 +2194,17 @@ wheels = [
 
 [[package]]
 name = "signalrgb"
-version = "1.0.1"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "mashumaro" },
-    { name = "pre-commit" },
-    { name = "requests" },
     { name = "rich" },
-    { name = "ruff" },
     { name = "typer" },
-    { name = "urllib3" },
-    { name = "wcwidth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/9f/18b87082fa073381b890cc04ca573476c81d9722ff2f6489cde3465aa155/signalrgb-1.0.1.tar.gz", hash = "sha256:427c4f6c1b9aa037b7a1e70e25c1d0cacab5d40953f0a87e72ccfe0b077cdb89", size = 96874, upload-time = "2025-07-06T18:32:31.48Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/95/0bbbf7e851823d1381bf5738aea78b3c79544557624bdb4a687fd436002b/signalrgb-1.0.2.tar.gz", hash = "sha256:c6400978c89a189e161258ff4c194a586ed78e6dcbc46768b25f846202345a3d", size = 39222, upload-time = "2026-04-05T08:49:58.021Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/ab/7ebe0671a7341d8f18bba67ce92ff708dec44a4ca397308a5da0bb703f8c/signalrgb-1.0.1-py3-none-any.whl", hash = "sha256:f64294dd2e8ea5ae46d0567fbfa258692b504046b0ca6153d0019ea6065e720b", size = 25731, upload-time = "2025-07-06T18:32:30.327Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/74/fa818cbf37466a654204185b7b1d289793762e4e26aec4288da8db54c134/signalrgb-1.0.2-py3-none-any.whl", hash = "sha256:bb749aa7771f27e7eb1734aaf09558657ae882bcba362fa8c1705ba1ddb4abf1", size = 25440, upload-time = "2026-04-05T08:49:56.156Z" },
 ]
 
 [[package]]
@@ -2240,7 +2235,7 @@ dev = [
 requires-dist = [
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "homeassistant", specifier = ">=2026.4.0" },
-    { name = "signalrgb", specifier = ">=1.0.1" },
+    { name = "signalrgb", specifier = ">=1.0.2" },
 ]
 
 [package.metadata.requires-dev]

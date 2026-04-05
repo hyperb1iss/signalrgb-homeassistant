@@ -12,7 +12,7 @@
     "signalrgb"
   ],
   "requirements": [
-    "signalrgb>=1.0.1"
+    "signalrgb>=1.0.2"
   ],
   "version": "1.0.1"
 }
