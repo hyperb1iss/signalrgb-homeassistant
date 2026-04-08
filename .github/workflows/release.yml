@@ -1,12 +1,163 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.2.0). Leave empty to auto-bump."
+        required: false
+        type: string
+      bump:
+        description: "Version bump type (if version not specified)"
+        required: false
+        type: choice
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: "Dry run (skip commit/tag/push)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   release:
-    name: Create GitHub Release
-    uses: hyperb1iss/shared-workflows/.github/workflows/github-release.yml@v1
-    secrets: inherit
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Determine version
+        id: version
+        run: |
+          CURRENT=$(python3 -c "
+          import json
+          with open('custom_components/signalrgb/manifest.json') as f:
+              print(json.load(f)['version'])
+          ")
+          echo "Current version: $CURRENT"
+
+          if [ -n "${{ inputs.version }}" ]; then
+            NEW="${{ inputs.version }}"
+          else
+            IFS='.' read -r major minor patch <<< "$CURRENT"
+            case "${{ inputs.bump }}" in
+              major) NEW="$((major + 1)).0.0" ;;
+              minor) NEW="$major.$((minor + 1)).0" ;;
+              patch) NEW="$major.$minor.$((patch + 1))" ;;
+            esac
+          fi
+
+          echo "New version: $NEW"
+
+          if ! [[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: $NEW"
+            exit 1
+          fi
+
+          if git rev-parse "v$NEW" >/dev/null 2>&1; then
+            echo "::error::Tag v$NEW already exists"
+            exit 1
+          fi
+
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in pyproject.toml
+        if: ${{ !inputs.dry_run }}
+        run: |
+          uv version "${{ steps.version.outputs.version }}"
+
+      - name: Bump version in manifest.json
+        if: ${{ !inputs.dry_run }}
+        run: |
+          python3 -c "
+          import json
+          path = 'custom_components/signalrgb/manifest.json'
+          with open(path) as f:
+              data = json.load(f)
+          data['version'] = '${{ steps.version.outputs.version }}'
+          with open(path, 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Update lockfile
+        if: ${{ !inputs.dry_run }}
+        run: uv lock
+
+      - name: Verify build
+        if: ${{ !inputs.dry_run }}
+        run: uv build
+
+      - name: Commit and tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add pyproject.toml uv.lock custom_components/signalrgb/manifest.json
+          git commit -m "🔖 Release v${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" \
+            -m "Release v${{ steps.version.outputs.version }}"
+
+          git push origin HEAD
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Generate release notes
+        if: ${{ !inputs.dry_run }}
+        uses: hyperb1iss/git-iris@v2
+        with:
+          command: release-notes
+          version-name: v${{ steps.version.outputs.version }}
+          provider: anthropic
+          model: claude-opus-4-6
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          output-file: RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+
+      - name: Summary
+        run: |
+          {
+            echo "## 🔖 Release v${{ steps.version.outputs.version }}"
+            echo ""
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "**Dry run — no changes committed.**"
+            else
+              echo "✅ Released and tagged"
+              echo ""
+              echo "- 🏷️ Tag: \`v${{ steps.version.outputs.version }}\`"
+              echo "- 📦 HACS will pick up the new version from the release"
+              echo "- 📝 AI-generated release notes via git-iris"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
