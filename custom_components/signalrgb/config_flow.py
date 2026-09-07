@@ -37,6 +37,7 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA, errors=errors)
 
+        client = None
         try:
             # Initialize client in a thread executor to avoid blocking SSL certificate loading
             client = await self.hass.async_add_executor_job(
@@ -50,7 +51,6 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             # Test the connection by getting the current effect
             await client.get_current_effect()
-            await client.aclose()
             LOGGER.debug("Successfully connected to SignalRGB")
         except SignalRGBConnectionError:
             LOGGER.error(
@@ -69,6 +69,12 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}")
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
+        finally:
+            if client is not None:
+                try:
+                    await client.aclose()
+                except Exception:  # pylint: disable=broad-except # noqa: BLE001
+                    LOGGER.debug("Failed to close SignalRGB test client", exc_info=True)
 
         return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA, errors=errors)
 
