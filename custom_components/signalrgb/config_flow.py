@@ -74,7 +74,7 @@ class SignalRGBConfigFlow(ConfigFlow, domain=DOMAIN):
                 try:
                     await client.aclose()
                 except Exception:  # pylint: disable=broad-except # noqa: BLE001
-                    pass
+                    LOGGER.debug("Failed to close SignalRGB test client", exc_info=True)
 
         return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA, errors=errors)
 
