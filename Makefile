@@ -1,36 +1,36 @@
-.PHONY: install test coverage lint typecheck format check fix update clean
+.PHONY: install test coverage lint typecheck format check fix build update clean
 
 install:
-	uv sync
+	uv sync --locked
 
 test:
-	uv run pytest
+	uv run --locked pytest
 
 coverage:
-	uv run pytest --cov --cov-report=term-missing --cov-report=html
+	uv run --locked pytest --cov --cov-report=term-missing --cov-report=html
 
 lint:
-	uv run ruff check custom_components tests scripts
-	uv run ruff format --check custom_components tests scripts
+	uv run --locked ruff check custom_components tests scripts
+	uv run --locked ruff format --check custom_components tests scripts
 
 typecheck:
-	uv run ty check
+	uv run --locked ty check
 
 format:
-	uv run ruff format custom_components tests scripts
+	uv run --locked ruff format custom_components tests scripts
 
 check: lint typecheck test
 
 fix:
-	uv run ruff check --fix custom_components tests scripts
-	uv run ruff format custom_components tests scripts
+	uv run --locked ruff check --fix custom_components tests scripts
+	uv run --locked ruff format custom_components tests scripts
+
+build:
+	uv build
 
 update:
-	@./scripts/release.py update-hass
+	@test -n "$(HASS_CONFIG_DIR)" || (echo "Set HASS_CONFIG_DIR to your Home Assistant config directory"; exit 1)
+	uv run --no-project scripts/release.py update-hass --config-dir "$(HASS_CONFIG_DIR)"
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*~" -delete
 	rm -rf .coverage htmlcov dist build

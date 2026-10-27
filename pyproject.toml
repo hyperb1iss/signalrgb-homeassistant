@@ -1,39 +1,29 @@
 [project]
 name = "signalrgb-homeassistant"
-version = "1.1.0"
+version = "1.2.0"
 description = "Home Assistant integration for SignalRGB"
 authors = [{ name = "Stefanie Jane", email = "stef@hyperbliss.tech" }]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.14.2"
 keywords = ["home-assistant", "signalrgb", "integration"]
 classifiers = [
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.14",
-    "Typing :: Typed",
 ]
 
 # Dependencies
 dependencies = [
-    "homeassistant>=2026.4.0",
-    "signalrgb>=1.0.2",
-    "colorama>=0.4.6",
+    "homeassistant>=2026.10.4",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.1",
-    "pytest-cov>=6.1.1",
-    "pytest-asyncio>=1.0.0",
-    "pytest-homeassistant-custom-component>=0.13.261",
-    "pre-commit>=4.2.0",
-    "ruff>=0.12.2",
-    "semver>=3.0.4",
-    "wcwidth>=0.2.13",
-    "dbus-fast>=2.44.1",
-    "ty>=0.0.28",
+    "pytest-homeassistant-custom-component==0.13.375",
+    "pre-commit>=4.7.0",
+    "ruff==0.17.3",
+    "ty==0.0.92",
 ]
 
 [project.urls]
@@ -42,15 +32,11 @@ repository = "https://github.com/hyperb1iss/signalrgb-homeassistant"
 documentation = "https://github.com/hyperb1iss/signalrgb-homeassistant"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.32.4,<2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["custom_components"]
-
-# Add configuration to allow direct references in dependencies
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -78,20 +64,12 @@ exclude_lines = [
 ]
 show_missing = true
 
-# Type checking — ty (Astral's type checker, replaces mypy)
+# Type checking
 [tool.ty.environment]
 python-version = "3.14"
 
 [tool.ty.src]
-include = ["custom_components", "tests"]
-
-[[tool.ty.overrides]]
-include = ["tests/**"]
-
-[tool.ty.overrides.rules]
-invalid-assignment = "ignore"
-invalid-argument-type = "ignore"
-possibly-unresolved-reference = "ignore"
+include = ["custom_components", "tests", "scripts"]
 
 [tool.ruff]
 # General settings

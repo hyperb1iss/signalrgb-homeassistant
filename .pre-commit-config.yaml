@@ -21,9 +21,9 @@ repos:
         args: ["--fix=lf"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.9
+    rev: v0.17.3
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
@@ -31,7 +31,7 @@ repos:
     hooks:
       - id: ty
         name: ty
-        entry: uv run ty check
+        entry: uv run --locked ty check
         language: system
         types: [python]
         pass_filenames: false

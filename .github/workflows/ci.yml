@@ -6,47 +6,32 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
-env:
-  UV_SYSTEM_PYTHON: 1
+permissions:
+  contents: read
 
 jobs:
-  ci:
-    name: Lint & Test
-    uses: hyperb1iss/shared-workflows/.github/workflows/python-ci.yml@v1
-    with:
-      python-version: "3.14"
-    secrets: inherit
-
-  typecheck:
-    name: Type Check (ty)
+  checks:
+    name: Lint, types, tests and build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          python-version: "3.14"
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Run ty
-        run: uv run ty check
+          enable-cache: true
+      - run: uv sync --locked
+      - run: make lint typecheck
+      - run: uv run --locked pytest --cov --cov-report=term-missing
+      - run: uv build
 
   validate:
-    name: Validate HA Integration
+    name: Validate HA integration
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Hassfest
         uses: home-assistant/actions/hassfest@master
-
       - name: HACS validation
         uses: hacs/action@main
         with:

@@ -14,305 +14,191 @@
   </a>
 </p>
 
-<p>
-  <a href="https://github.com/hacs/integration">
-    <img src="https://img.shields.io/badge/HACS-Default-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white" alt="HACS Default">
-  </a>
-  <a href="https://www.home-assistant.io">
-    <img src="https://img.shields.io/badge/Home%20Assistant-2026.4+-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white" alt="Home Assistant 2026.4+">
-  </a>
-  <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/Python-3.14+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.14+">
-  </a>
-</p>
+Control your SignalRGB lighting from Home Assistant over your local network.
 
-<strong>Transform your smart home lighting with the power of SignalRGB, integrated directly into Home Assistant.</strong>
-
-<a href="#-features">Features</a> •
-<a href="#-requirements">Requirements</a> •
-<a href="#-installation">Installation</a> •
-<a href="#%EF%B8%8F-configuration">Configuration</a> •
-<a href="#-usage">Usage</a> •
-<a href="#-development">Development</a> •
-<a href="#-contributing">Contributing</a>
+[Features](#features) · [Setup](#setup) · [Usage](#usage) · [Troubleshooting](#troubleshooting) · [Development](#development)
 
 </div>
 
----
+## Features
 
-## 🔮 Features
+| Entity | Controls |
+| --- | --- |
+| Light | Canvas on/off, global brightness, installed effects |
+| Layout selector | The active SignalRGB device layout |
+| Effect preset selector | Presets belonging to the current effect |
+| Buttons | Next, previous, and random effects |
 
-- 🌐 Control SignalRGB as a light entity in Home Assistant
-- 💡 Seamless on/off control with brightness adjustment
-- 🎭 Apply lighting effects from SignalRGB's full effect library
-- 🧬 Automatic effect image and color extraction
-- 🧩 Select and apply per-effect presets
-- 📐 Change device layouts with the layout selector
-- 🪄 Navigate effects with next / previous / random buttons
-- ⚡ Single-shot state polling (one API call per coordinator cycle)
+The integration uses SignalRGB's [local API v1](https://docs.signalrgb.com/developer/signalrgb-api/introduction/). Home Assistant polls SignalRGB every five minutes and refreshes after commands. Existing entity unique IDs are preserved when upgrading.
 
-Want more features? Vote for this [SignalRGB feature request](https://forum.signalrgb.com/t/rest-api-features/2635)!
+## Requirements
 
-## 📡 Requirements
+- Home Assistant 2026.10.4 or newer (Python 3.14.2 or newer).
+- SignalRGB running on a Windows PC reachable from Home Assistant.
+- A working SignalRGB API v1 endpoint, normally on TCP port `16038`.
+- A SignalRGB account with the required API access. SignalRGB's [API documentation](https://docs.signalrgb.com/developer/signalrgb-api/introduction/) says most endpoints require Pro and return HTTP 403 when the user is signed out or lacks Pro.
 
-- **Home Assistant** 2026.4.0 or newer
-- **Python** 3.14.2 or newer (matches Home Assistant's floor)
-- **SignalRGB** installed and running on a Windows PC reachable from your HA instance
-- **SignalRGB HTTP API** enabled (default port: `16038`)
-- **SignalRGB [Pro subscription](https://signalrgb.com/pricing/)** — the HTTP API requires Pro
+## Setup
 
-## 💎 Installation
+### Install
 
-### HACS (Recommended)
+In [HACS](https://hacs.xyz/), search for **SignalRGB**, download the integration, and restart Home Assistant.
 
-This integration is in the [HACS](https://hacs.xyz/) default repository:
+For a manual installation, download the source archive from a [release](https://github.com/hyperb1iss/signalrgb-homeassistant/releases) and copy `custom_components/signalrgb/` into your Home Assistant `custom_components/` directory. Alternatively, extract the release asset `signalrgb.zip` directly into `custom_components/signalrgb/`. Restart Home Assistant after installing.
 
-1. Open **HACS** in Home Assistant
-2. Go to **Integrations** and click the **+** button
-3. Search for **SignalRGB** and select it
-4. Click **Download** and restart Home Assistant
+### Check the connection
 
-### Manual Installation
+Start SignalRGB and sign in on the Windows PC. Open this address in a browser on that PC:
 
-1. Download the latest release from the [releases page](https://github.com/hyperb1iss/signalrgb-homeassistant/releases)
-2. Copy the `custom_components/signalrgb/` folder into your Home Assistant `custom_components/` directory
-3. Restart Home Assistant
-
-### Enable the SignalRGB HTTP API
-
-1. Open SignalRGB on your Windows PC
-2. Go to **Settings → General → Enable HTTP API**
-3. Note the port number (default: `16038`)
-4. If needed, allow incoming connections on that port in Windows Firewall
-
-## ⚙️ Configuration
-
-After installation, add the integration from the Home Assistant UI:
-
-1. Navigate to **Settings → Devices & Services**
-2. Click **Add Integration** and search for **SignalRGB**
-3. Enter the hostname or IP address of the PC running SignalRGB and the port number
-4. Click **Submit**
-
-## 🎭 Usage
-
-Once configured, SignalRGB exposes several entities:
-
-- 💡 **Light Entity** — power, brightness, and effect selection
-- 📐 **Layout Selector** — switch between SignalRGB device layouts
-- 🧩 **Effect Preset Selector** — apply presets for the current effect
-- 🪄 **Button Entities** — navigate effects (next, previous, random)
-
-### 💡 Light Entity
-
-The main light entity lets you turn SignalRGB on/off, select effects, and adjust brightness — all from automations, scripts, and scenes.
-
-```yaml
-automation:
-  - alias: "Gaming Time"
-    trigger:
-      platform: state
-      entity_id: binary_sensor.gaming_pc_status
-      to: "on"
-    action:
-      - service: light.turn_on
-        target:
-          entity_id: light.signalrgb
-        data:
-          effect: "Cyberpunk 2077"
-          brightness: 255
+```text
+http://127.0.0.1:16038/api/v1/lighting
 ```
 
-### 📐 Layout Selector
+A working endpoint returns JSON with `status: "ok"` and the current lighting state. The old instructions pointing to **Settings → General → Enable HTTP API** were incorrect for current versions. Use the endpoint check to establish whether your installation is serving the API.
 
-Switch between SignalRGB device layouts:
+Next, check the same endpoint from Home Assistant's host or another machine on its network, replacing `192.168.1.100` with the Windows PC's address:
+
+```bash
+curl --max-time 10 http://192.168.1.100:16038/api/v1/lighting
+```
+
+If the local check works but the network check fails, allow inbound TCP connections to port `16038` through Windows Firewall for your trusted network. Check any routing or firewall rules between Home Assistant and the PC. Keep the API on your local network; it uses plain HTTP.
+
+### Add to Home Assistant
+
+1. Open **Settings → Devices & services → Add integration**.
+2. Search for **SignalRGB**.
+3. Enter the PC's hostname or IP address and the API port (default `16038`). Enter only the hostname or IP, without `http://` or a path.
+4. Submit the form.
+
+If the PC's address or API port changes, use **Reconfigure** on the integration entry to update it without recreating the entities.
+
+## Usage
+
+Find the integration's entities on its device page. The entity IDs below are examples; replace them with your actual IDs. Effect, layout, and preset names must match the options shown in Home Assistant.
+
+### Apply an effect and brightness
 
 ```yaml
-service: select.select_option
+action: light.turn_on
+target:
+  entity_id: light.signalrgb
+data:
+  effect: "Neon Shift"
+  brightness: 200
+```
+
+### Change layout or preset
+
+```yaml
+action: select.select_option
 target:
   entity_id: select.signalrgb_layout
 data:
   option: "My Gaming Setup"
 ```
 
-Automation example — switch layout in the evening:
-
 ```yaml
-automation:
-  - alias: "Evening Gaming Setup"
-    trigger:
-      platform: time
-      at: "20:00:00"
-    action:
-      - service: select.select_option
-        target:
-          entity_id: select.signalrgb_layout
-        data:
-          option: "Gaming Setup"
-      - service: light.turn_on
-        target:
-          entity_id: light.signalrgb
-        data:
-          effect: "Ambient Waves"
-          brightness: 200
-```
-
-### 🧩 Effect Preset Selector
-
-Apply presets for the current effect:
-
-```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.signalrgb_effect_preset
 data:
-  option: "Rainbow"
+  option: "My Fancy Preset 1"
 ```
 
-Movie-night script example:
+The preset selector reports an unknown selection until you apply a preset through Home Assistant. SignalRGB's documented API does not identify the active preset. Changing effects clears the remembered selection.
+
+### Change effects on a schedule
+
+Paste this into an automation's YAML editor:
 
 ```yaml
-script:
-  movie_night:
-    alias: "Movie Night Lighting"
-    sequence:
-      - service: light.turn_on
-        target:
-          entity_id: light.signalrgb
-        data:
-          effect: "Audio Visualizer"
-      - delay: 00:00:02
-      - service: select.select_option
-        target:
-          entity_id: select.signalrgb_effect_preset
-        data:
-          option: "Subtle Pulse"
-      - service: light.turn_on
-        target:
-          entity_id: light.signalrgb
-        data:
-          brightness: 128
+alias: Hourly SignalRGB effect
+triggers:
+  - trigger: time_pattern
+    hours: "*"
+conditions:
+  - condition: state
+    entity_id: light.signalrgb
+    state: "on"
+actions:
+  - action: button.press
+    target:
+      entity_id: button.signalrgb_next_effect
+mode: single
 ```
 
-### 🪄 Effect Navigation Buttons
+The Previous Effect button follows SignalRGB's effect history. SignalRGB can reject the command when there is no previous effect.
 
-```yaml
-# Next effect
-service: button.press
-target:
-  entity_id: button.signalrgb_next_effect
+For effect previews and lighting controls on a dashboard, see [hyper-light-card](https://github.com/hyperb1iss/hyper-light-card).
+
+## Scope and alternatives
+
+### Individual devices
+
+The integration exposes one light for the SignalRGB canvas. Individual keyboards, fans, and strips are not separate Home Assistant lights. The documented [lighting API](https://docs.signalrgb.com/developer/signalrgb-api/lighting/) provides global canvas controls; it does not document individual-device RGB control. Configure device-specific behavior in SignalRGB.
+
+### Sending SignalRGB colors to Home Assistant lights
+
+The integration controls SignalRGB from Home Assistant. It does not stream SignalRGB's rendered colors to arbitrary Home Assistant lights. For supported hardware, connect the lights directly to SignalRGB; its [network device guide](https://docs.signalrgb.com/guides/device-configuration/supported-wifi-devices/) covers supported brands, including Philips Hue through a Hue Bridge. Generic Zigbee lights exposed only through Home Assistant need a separate bridge implementation.
+
+### Application URLs
+
+SignalRGB also supports [application URLs](https://docs.signalrgb.com/developer/application-urls/) for applying effects from another program on the Windows PC. For example, run this in Command Prompt:
+
+```bat
+start "" "signalrgb://effect/apply/Gradient%20Wave"
 ```
 
-```yaml
-# Random effect
-service: button.press
-target:
-  entity_id: button.signalrgb_random_effect
-```
+In a `.bat` file, double the percent sign (`Gradient%%20Wave`). A Windows automation agent can launch the URL on the PC. Application URLs are a separate control mechanism and do not provide this integration's state reporting. Check SignalRGB's current licensing for the feature you intend to use.
 
-Cycle effects every hour while the light is on:
+## Troubleshooting
 
-```yaml
-automation:
-  - alias: "Hourly Effect Change"
-    trigger:
-      platform: time_pattern
-      hours: "*"
-    condition:
-      - condition: state
-        entity_id: light.signalrgb
-        state: "on"
-    action:
-      - service: button.press
-        target:
-          entity_id: button.signalrgb_next_effect
-```
+| Symptom | Check |
+| --- | --- |
+| Connection refused or timed out | Confirm SignalRGB is running, then compare the local and network endpoint checks above. Verify the host, port, and Windows Firewall rule. |
+| HTTP 403 | Sign in to SignalRGB and check the account's API entitlement. |
+| HTTP 404 or an unexpected response | Check the full `/api/v1/lighting` URL and update SignalRGB. A response from `/` alone does not verify API compatibility. |
+| Entities unavailable after the PC sleeps | Wake the PC and start SignalRGB. Home Assistant's next successful refresh restores availability. |
+| Effect or preset missing | Confirm the effect is installed and that the preset belongs to the active effect. |
+| Windows certificate errors or SignalRGB crashes | Contact [SignalRGB support](https://docs.signalrgb.com/guides/community-support/contact-support/); include the Windows event and desktop app version. |
 
-Dashboard button card:
+For integration bugs, [open an issue](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new) with the Home Assistant, integration, and SignalRGB versions, relevant Home Assistant logs, and the result of the API check. Remove private addresses and personal data from anything you post.
 
-```yaml
-type: button
-name: Next Effect
-icon: mdi:skip-next
-tap_action:
-  action: call-service
-  service: button.press
-  target:
-    entity_id: button.signalrgb_next_effect
-```
+## Development
 
-## 🪄 Enhance Your UI with hyper-light-card
-
-Take your SignalRGB control to the next level with [hyper-light-card](https://github.com/hyperb1iss/hyper-light-card) — a custom Lovelace card featuring:
-
-- 🌈 Dynamic color adaptation based on the current effect
-- 📊 Detailed effect information display
-- 🖼️ Effect preview images
-- 🎛️ Easy effect switching and parameter control
-
-Install via HACS as a custom repository in the **Frontend** category.
-
-## 🧪 Development
-
-This project uses the **[Astral](https://astral.sh)** stack — [uv](https://docs.astral.sh/uv/) for packaging, [ruff](https://docs.astral.sh/ruff/) for linting and formatting, and [ty](https://docs.astral.sh/ty/) for type checking.
+The project uses [uv](https://docs.astral.sh/uv/) for dependencies, [Ruff](https://docs.astral.sh/ruff/) for linting and formatting, and [ty](https://docs.astral.sh/ty/) for type checking.
 
 ```bash
-# Install uv (one-time)
-curl --proto '=https' --tlsv1.2 -sSf https://astral.sh/uv/install.sh | sh
-
-# Clone and set up
 git clone https://github.com/hyperb1iss/signalrgb-homeassistant.git
 cd signalrgb-homeassistant
-uv sync
-
-# Install pre-commit hooks
+uv sync --locked
 uv run pre-commit install
+make check
 ```
 
-### Common Commands
+| Command | Purpose |
+| --- | --- |
+| `make test` | Run the tests |
+| `make coverage` | Run tests with terminal and HTML coverage reports |
+| `make lint` | Check lint and formatting |
+| `make typecheck` | Run ty |
+| `make check` | Run lint, type checking, and tests |
+| `make format` | Format Python files |
+| `make fix` | Apply Ruff fixes and formatting |
+| `make build` | Build the distribution |
+| `make update HASS_CONFIG_DIR=/path/to/config` | Copy the integration to an explicit local Home Assistant config directory |
 
-| Command | What it does |
-|---|---|
-| `make test` | Run the test suite |
-| `make coverage` | Tests with coverage (HTML report in `htmlcov/`) |
-| `make lint` | `ruff check` + `ruff format --check` |
-| `make typecheck` | `ty check` |
-| `make check` | lint → typecheck → test (the full gauntlet) |
-| `make format` | Format with ruff |
-| `make fix` | Auto-fix lint issues + format |
+Tests simulate SignalRGB responses and exercise Home Assistant behavior. They do not replace a live test against the Windows application. Changes to API handling should include response fixtures and a test for the reported failure.
 
-All commands run through `uv run` — no virtualenv activation needed.
+Contributions should use [Conventional Commits](https://www.conventionalcommits.org/), pass `make check`, and describe the behavior changed and how it was verified. Include the tested SignalRGB version when reporting a live test.
 
-## 🦋 Contributing
+### Release preparation
 
-Contributions are welcome!
+Prepare a version locally with `uv run scripts/release.py prepare VERSION`, replacing `VERSION` with the intended version. Review the version changes and changelog, then run the checks and build. Preparation does not commit, tag, or push. The release workflow validates version tags, builds the integration archive, and publishes the GitHub release when a maintainer pushes a release tag.
 
-1. Fork the repository
-2. Create a branch: `git checkout -b your-feature-name`
-3. Make your changes, commit using [Gitmoji](https://gitmoji.dev/) conventions
-4. Run `make check` to verify lint, types, and tests all pass
-5. Open a pull request
+## License
 
-## 🐛 Support
+[Apache License 2.0](LICENSE). This project is independent of WhirlwindFX and SignalRGB.
 
-- 📚 [Documentation & Wiki](https://github.com/hyperb1iss/signalrgb-homeassistant/wiki)
-- 🐛 [Report a bug](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new?assignees=&labels=bug&template=bug_report.md&title=)
-- 💎 [Request a feature](https://github.com/hyperb1iss/signalrgb-homeassistant/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=)
-
-## 📄 License
-
-Apache License 2.0 — see [LICENSE](LICENSE) for details.
-
-## ⚠️ Disclaimer
-
-This integration is not officially affiliated with or endorsed by WhirlwindFX or SignalRGB. Use at your own risk.
-
----
-
-<div align="center">
-
-Created by [Stefanie Jane 🌠](https://github.com/hyperb1iss)
-
-If you find this project useful, [buy me a Monster Ultra Violet](https://ko-fi.com/hyperb1iss) 💜
-
-</div>
+Created by [Stefanie Jane](https://github.com/hyperb1iss). If the integration is useful to you, [buy me a Monster Ultra Violet](https://ko-fi.com/hyperb1iss) 💜
