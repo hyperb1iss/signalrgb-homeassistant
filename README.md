@@ -44,7 +44,7 @@ The integration uses SignalRGB's [local API v1](https://docs.signalrgb.com/devel
 
 In [HACS](https://hacs.xyz/), search for **SignalRGB**, download the integration, and restart Home Assistant.
 
-For a manual installation, download a [release](https://github.com/hyperb1iss/signalrgb-homeassistant/releases), copy `custom_components/signalrgb/` into your Home Assistant `custom_components/` directory, and restart Home Assistant.
+For a manual installation, download the source archive from a [release](https://github.com/hyperb1iss/signalrgb-homeassistant/releases) and copy `custom_components/signalrgb/` into your Home Assistant `custom_components/` directory. Alternatively, extract the release asset `signalrgb.zip` directly into `custom_components/signalrgb/`. Restart Home Assistant after installing.
 
 ### Check the connection
 

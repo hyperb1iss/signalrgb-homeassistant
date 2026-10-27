@@ -9,10 +9,11 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION_PATTERN = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
+VERSION_PATTERN = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
 
 def validate_version(version: str) -> str:
@@ -70,12 +71,29 @@ def install_integration(config_dir: Path, root: Path = ROOT) -> None:
     source = root / "custom_components/signalrgb"
     if destination.is_symlink() or destination.resolve() == source.resolve():
         raise ValueError("Refusing to replace a symlink or the source integration")
-    shutil.copytree(
-        source,
-        destination,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=".signalrgb-", dir=destination.parent))
+    staging = temporary / "incoming"
+    backup = temporary / "previous"
+    preserve_backup = False
+    try:
+        shutil.copytree(source, staging, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        if destination.exists():
+            destination.rename(backup)
+        staging.rename(destination)
+    except BaseException:
+        if backup.exists():
+            try:
+                backup.rename(destination)
+            except BaseException as err:
+                preserve_backup = True
+                raise OSError(
+                    f"Could not restore the previous installation; recover it from {backup}"
+                ) from err
+        raise
+    finally:
+        if not preserve_backup:
+            shutil.rmtree(temporary)
 
 
 def main() -> None:

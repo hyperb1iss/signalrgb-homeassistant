@@ -60,13 +60,85 @@ def test_install_requires_config(release_tree: Path, tmp_path: Path) -> None:
 
 
 def test_install_preserves_unrelated_files(release_tree: Path, tmp_path: Path) -> None:
-    """Installing one component cannot erase another component or local files."""
+    """An upgrade removes stale component modules without touching other integrations."""
     config = tmp_path / "ha"
     config.mkdir()
     (config / "configuration.yaml").touch()
     component = config / "custom_components/signalrgb"
     component.mkdir(parents=True)
-    (component / "local.txt").write_text("keep")
+    (component / "diagnostics.py").write_text("obsolete")
+    unrelated = config / "custom_components/other"
+    unrelated.mkdir()
+    (unrelated / "__init__.py").write_text("keep")
     install_integration(config, release_tree)
-    assert (component / "local.txt").read_text() == "keep"
+    assert not (component / "diagnostics.py").exists()
+    assert (unrelated / "__init__.py").read_text() == "keep"
     assert json.loads((component / "manifest.json").read_text())["version"] == "1.1.0"
+
+
+def test_install_copy_failure_preserves_existing(release_tree: Path, tmp_path: Path) -> None:
+    """A failed staging copy leaves the working installation intact."""
+    config = tmp_path / "ha"
+    config.mkdir()
+    (config / "configuration.yaml").touch()
+    component = config / "custom_components/signalrgb"
+    component.mkdir(parents=True)
+    (component / "__init__.py").write_text("working")
+    with (
+        patch("scripts.release.shutil.copytree", side_effect=OSError("disk full")),
+        pytest.raises(OSError, match="disk full"),
+    ):
+        install_integration(config, release_tree)
+    assert (component / "__init__.py").read_text() == "working"
+
+
+def test_install_swap_failure_restores_existing(release_tree: Path, tmp_path: Path) -> None:
+    """A failed replacement restores the previous component directory."""
+    config = tmp_path / "ha"
+    config.mkdir()
+    (config / "configuration.yaml").touch()
+    component = config / "custom_components/signalrgb"
+    component.mkdir(parents=True)
+    (component / "__init__.py").write_text("working")
+    original_rename = Path.rename
+
+    def fail_incoming(path: Path, target: Path) -> Path:
+        if path.name == "incoming":
+            raise OSError("rename failed")
+        return original_rename(path, target)
+
+    with (
+        patch.object(Path, "rename", fail_incoming),
+        pytest.raises(OSError, match="rename failed"),
+    ):
+        install_integration(config, release_tree)
+    assert (component / "__init__.py").read_text() == "working"
+
+
+@pytest.mark.parametrize("failure", [OSError("rename failed"), KeyboardInterrupt()])
+def test_install_failed_rollback_keeps_backup(
+    release_tree: Path, tmp_path: Path, failure: BaseException
+) -> None:
+    """Even interrupted installs retain the old files if restoration also fails."""
+    config = tmp_path / "ha"
+    config.mkdir()
+    (config / "configuration.yaml").touch()
+    component = config / "custom_components/signalrgb"
+    component.mkdir(parents=True)
+    (component / "__init__.py").write_text("working")
+    original_rename = Path.rename
+
+    def fail_replacement_and_restore(path: Path, target: Path) -> Path:
+        if path.name in {"incoming", "previous"}:
+            raise failure
+        return original_rename(path, target)
+
+    with (
+        patch.object(Path, "rename", fail_replacement_and_restore),
+        pytest.raises(OSError, match="recover it from") as error,
+    ):
+        install_integration(config, release_tree)
+    backups = list((config / "custom_components").glob(".signalrgb-*/previous"))
+    assert len(backups) == 1
+    assert (backups[0] / "__init__.py").read_text() == "working"
+    assert str(backups[0]) in str(error.value)

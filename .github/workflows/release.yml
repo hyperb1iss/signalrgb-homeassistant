@@ -18,10 +18,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v9
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          enable-cache: true
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: false
       - name: Verify tag and package versions
         env:
           RELEASE_TAG: ${{ github.ref_name }}
@@ -31,9 +33,10 @@ jobs:
         working-directory: custom_components/signalrgb
         run: zip -r ../../dist/signalrgb.zip . -x '*.pyc' '*/__pycache__/*'
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/signalrgb.zip
             dist/*.whl
