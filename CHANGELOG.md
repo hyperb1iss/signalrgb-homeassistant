@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-27
+
 ### Changed
 
 - Require Home Assistant 2026.10.4 or newer and use its current form schemas.
@@ -95,7 +97,8 @@ See the [git history](https://github.com/hyperb1iss/signalrgb-homeassistant/comm
 and [releases page](https://github.com/hyperb1iss/signalrgb-homeassistant/releases) for
 details on earlier versions.
 
-[Unreleased]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/hyperb1iss/signalrgb-homeassistant/compare/v0.8.0...v1.0.0
