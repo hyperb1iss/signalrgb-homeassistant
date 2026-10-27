@@ -1,269 +1,72 @@
-"""Unit tests for the SignalRGB select components."""
+"""Test layouts and presets through Home Assistant services."""
 
-# pylint: disable=protected-access
+from unittest.mock import AsyncMock
 
-from unittest.mock import AsyncMock, MagicMock
+from homeassistant.core import HomeAssistant
 
-from homeassistant.exceptions import HomeAssistantError
-import pytest
+from custom_components.signalrgb.api import CurrentState, Layout, Preset
+from custom_components.signalrgb.coordinator import SignalRGBConfigEntry
 
-from custom_components.signalrgb.const import DOMAIN
-from custom_components.signalrgb.select import (
-    LAYOUT_SELECT,
-    PRESET_SELECT,
-    SignalRGBLayoutSelect,
-    SignalRGBPresetSelect,
-    async_setup_entry,
-)
-
-# Import fixtures from conftest.py
+from .conftest import entity_id
 
 
-async def test_async_setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
-    """Test setting up the entry with layouts and presets."""
-    # Prepare hass.data for the entry
-    mock_hass.data[DOMAIN] = {mock_config_entry.entry_id: {"client": mock_signalrgb_client}}
-
-    # Mock get_layouts and current_layout for layout coordinator
-    mock_layout = MagicMock()
-    mock_layout.id = "test_layout"
-
-    # Mock get_current_effect and get_effects for effect coordinator
-    mock_effect = MagicMock()
-    mock_effect.id = "test_effect_id"
-    mock_effect.attributes.name = "Test Effect"
-
-    # Mock get_effect_presets for preset selector
-    mock_preset = MagicMock()
-    mock_preset.id = "test_preset"
-
-    # Set up return values for the async client methods
-    mock_signalrgb_client.get_layouts.return_value = [mock_layout]
-    mock_signalrgb_client.get_current_layout.return_value = mock_layout
-    mock_signalrgb_client.get_current_effect.return_value = mock_effect
-    mock_signalrgb_client.get_effects.return_value = [mock_effect]
-    mock_signalrgb_client.get_effect_presets.return_value = [mock_preset]
-
-    # Call async_setup_entry
-    entities = []
-
-    def async_add_entities(added_entities):
-        return entities.extend(added_entities)
-
-    await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
-
-    # Check that both entities were added
-    assert len(entities) == 2
-    assert isinstance(entities[0], SignalRGBLayoutSelect)
-    assert isinstance(entities[1], SignalRGBPresetSelect)
+async def test_layout_reads_actual_state(
+    hass: HomeAssistant, setup_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """Layout option IDs stay compatible and update after the command."""
+    select_id = entity_id(hass, setup_entry, "select", "layout")
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "Desk"
+    assert state.attributes["options"] == ["Desk", "Room"]
+    mock_client.get_current_layout.return_value = Layout("Room")
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": select_id, "option": "Room"}, blocking=True
+    )
+    mock_client.set_current_layout.assert_awaited_once_with("Room")
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "Room"
 
 
-class TestSignalRGBLayoutSelect:
-    """Unit tests for the SignalRGBLayoutSelect class."""
-
-    @pytest.fixture
-    def mock_layout_select(
-        self, mock_hass, mock_signalrgb_client, mock_config_entry, mock_coordinator
-    ):
-        """Create a mock layout select entity."""
-        layout_select = SignalRGBLayoutSelect(
-            mock_coordinator,
-            mock_signalrgb_client,
-            mock_config_entry,
-        )
-        layout_select.hass = mock_hass
-        layout_select.entity_id = f"select.signalrgb_{LAYOUT_SELECT}"
-        layout_select.async_write_ha_state = MagicMock()
-        return layout_select
-
-    @pytest.fixture
-    def mock_layout_data(self, mock_coordinator):
-        """Create mock layout data for the coordinator."""
-        mock_layout1 = MagicMock()
-        mock_layout1.id = "layout1"
-        mock_layout2 = MagicMock()
-        mock_layout2.id = "layout2"
-        current_layout = MagicMock()
-        current_layout.id = "layout1"
-
-        mock_coordinator.data = {
-            "layouts": [mock_layout1, mock_layout2],
-            "current_layout": current_layout,
-        }
-
-        return mock_coordinator.data
-
-    async def test_layout_select_properties(self, mock_layout_select, mock_layout_data):
-        """Test the layout selector properties."""
-        # Update the data from coordinator
-        mock_layout_select._update_data()
-
-        # Since we're mocking, manually set up the layouts dictionary
-        mock_layout_select._layouts = {
-            "layout1": mock_layout_data["layouts"][0],
-            "layout2": mock_layout_data["layouts"][1],
-        }
-        mock_layout_select._current_layout_id = "layout1"
-
-        # Test properties
-        assert mock_layout_select.available is True
-        assert sorted(mock_layout_select.options) == ["layout1", "layout2"]
-        assert mock_layout_select.current_option == "layout1"
-
-    async def test_layout_select_option(self, mock_layout_select):
-        """Test selecting a layout option."""
-        # Set up the entity's state
-        mock_layout1 = MagicMock()
-        mock_layout1.id = "layout1"
-        mock_layout2 = MagicMock()
-        mock_layout2.id = "layout2"
-
-        mock_layout_select._layouts = {
-            "layout1": mock_layout1,
-            "layout2": mock_layout2,
-        }
-
-        # Set up the coordinator and hass data for the fast refresh
-        mock_layout_select.coordinator.data = {"layouts": [], "current_layout": None}
-        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
-        mock_layout_select.coordinator.async_set_updated_data = MagicMock()
-
-        # Mock the client's get methods that are called during direct refresh
-        mock_layout_select._client.get_current_layout = AsyncMock(return_value=mock_layout2)
-
-        # Set up mock coordinator in hass.data
-        mock_coordinator = MagicMock()
-        mock_coordinator.async_request_refresh = AsyncMock()
-
-        mock_layout_select.hass.data[DOMAIN] = {
-            mock_layout_select._config_entry.entry_id: {
-                "client": mock_layout_select._client,
-                "coordinator": mock_coordinator,
-            }
-        }
-
-        # Test selecting a valid option
-        await mock_layout_select.async_select_option("layout2")
-
-        # Verify the client was called to set the layout
-        mock_layout_select._client.set_current_layout.assert_called_with("layout2")
-
-        assert mock_layout_select._current_layout_id == "layout2"
-        mock_layout_select.async_write_ha_state.assert_called_once()
-
-        # Verify the direct state fetching was called
-        mock_layout_select._client.get_current_layout.assert_called_once()
-
-        # Verify coordinator was updated directly
-        mock_layout_select.coordinator.async_set_updated_data.assert_called_once()
-
-        # Test selecting an invalid option
-        with pytest.raises(HomeAssistantError):
-            await mock_layout_select.async_select_option("nonexistent_layout")
+async def test_presets_never_guess_default_and_reset_on_effect_change(
+    hass: HomeAssistant, setup_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A newly loaded effect has no invented first-preset selection."""
+    select_id = entity_id(hass, setup_entry, "select", "preset")
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "unknown"
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": select_id, "option": "Soft"}, blocking=True
+    )
+    mock_client.apply_effect_preset.assert_awaited_once_with("rainbow", "Soft")
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "Soft"
+    mock_client.get_current_state.return_value = CurrentState("solid", "Solid", True, 50)
+    await setup_entry.runtime_data.async_refresh()
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "unknown"
+    mock_client.get_current_state.return_value = CurrentState("rainbow", "Rainbow", True, 50)
+    await setup_entry.runtime_data.async_refresh()
+    state = hass.states.get(select_id)
+    assert state is not None
+    assert state.state == "unknown"
 
 
-class TestSignalRGBPresetSelect:
-    """Unit tests for the SignalRGBPresetSelect class."""
-
-    @pytest.fixture
-    def mock_preset_select(
-        self, mock_hass, mock_signalrgb_client, mock_config_entry, mock_coordinator
-    ):
-        """Create a mock preset select entity."""
-        preset_select = SignalRGBPresetSelect(
-            mock_coordinator,
-            mock_signalrgb_client,
-            mock_config_entry,
-        )
-        preset_select.hass = mock_hass
-        preset_select.entity_id = f"select.signalrgb_{PRESET_SELECT}"
-        preset_select.async_write_ha_state = MagicMock()
-        return preset_select
-
-    @pytest.fixture
-    def mock_preset_data(self, mock_coordinator):
-        """Create mock preset data for the coordinator."""
-        mock_effect = MagicMock()
-        mock_effect.id = "effect_id"
-        mock_effect.attributes.name = "Test Effect"
-
-        mock_preset1 = MagicMock()
-        mock_preset1.id = "preset1"
-        mock_preset2 = MagicMock()
-        mock_preset2.id = "preset2"
-
-        mock_coordinator.data = {
-            "current_effect": mock_effect,
-            "presets": [mock_preset1, mock_preset2],
-        }
-
-        return mock_coordinator.data
-
-    async def test_preset_select_properties(self, mock_preset_select, mock_preset_data):
-        """Test the preset selector properties."""
-        # Update the data from coordinator
-        mock_preset_select._update_data()
-
-        # Test properties
-        assert mock_preset_select.available is True
-        assert mock_preset_select.options == ["preset1", "preset2"]
-        assert (
-            mock_preset_select.current_option == "preset1"
-        )  # First preset is automatically selected
-
-    async def test_preset_select_option(self, mock_preset_select, mock_preset_data):
-        """Test selecting a preset option."""
-        # Set up the entity's state
-        mock_preset_select._current_effect = mock_preset_data["current_effect"]
-        mock_preset_select._presets = ["preset1", "preset2"]
-
-        # Set up the coordinator and hass data for the fast refresh
-        mock_preset_select.coordinator.data = {
-            "current_effect": mock_preset_data["current_effect"],
-            "presets": mock_preset_data["presets"],
-        }
-        # Configure MagicMock instead of AsyncMock since async_set_updated_data is not actually async
-        mock_preset_select.coordinator.async_set_updated_data = MagicMock()
-
-        # Mock the client's get methods that are called during direct refresh
-        mock_preset_select._client.get_current_effect = AsyncMock(
-            return_value=mock_preset_data["current_effect"]
-        )
-
-        # Set up mock coordinator in hass.data
-        mock_coordinator = MagicMock()
-        mock_coordinator.async_request_refresh = AsyncMock()
-
-        mock_preset_select.hass.data[DOMAIN] = {
-            mock_preset_select._config_entry.entry_id: {
-                "client": mock_preset_select._client,
-                "coordinator": mock_coordinator,
-            }
-        }
-
-        # Test selecting a valid option
-        await mock_preset_select.async_select_option("preset1")
-
-        # Verify the client was called to apply the preset directly
-        mock_preset_select._client.apply_effect_preset.assert_called_with(
-            mock_preset_data["current_effect"].id,
-            "preset1",
-        )
-
-        assert mock_preset_select._current_preset == "preset1"
-        mock_preset_select.async_write_ha_state.assert_called_once()
-
-        # Verify the direct state fetching was called
-        mock_preset_select._client.get_current_effect.assert_called_once()
-
-        # Verify coordinator was updated directly
-        mock_preset_select.coordinator.async_set_updated_data.assert_called_once()
-
-        # Test selecting an invalid option
-        with pytest.raises(HomeAssistantError):
-            await mock_preset_select.async_select_option("nonexistent_preset")
-
-        # Test without active effect
-        mock_preset_select._current_effect = None
-        with pytest.raises(HomeAssistantError):
-            await mock_preset_select.async_select_option("preset1")
+async def test_preset_list_updates_and_empty_list_is_unavailable(
+    hass: HomeAssistant, setup_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """Preset options follow the current server catalog."""
+    mock_client.get_effect_presets.return_value = [Preset("New")]
+    await setup_entry.runtime_data.async_refresh()
+    state = hass.states.get(entity_id(hass, setup_entry, "select", "preset"))
+    assert state is not None
+    assert state.attributes["options"] == ["New"]
+    mock_client.get_effect_presets.return_value = []
+    await setup_entry.runtime_data.async_refresh()
+    state = hass.states.get(entity_id(hass, setup_entry, "select", "preset"))
+    assert state is not None
+    assert state.state == "unavailable"

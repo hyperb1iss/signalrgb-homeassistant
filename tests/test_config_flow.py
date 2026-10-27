@@ -1,166 +1,102 @@
-"""Test the SignalRGB config flow."""
+"""Test configuration through Home Assistant's flow manager."""
 
-from unittest.mock import patch
+from collections.abc import Generator
+from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries, data_entry_flow
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from signalrgb.exceptions import (
-    ConnectionError as SignalRGBConnectionError,
-    SignalRGBException,
-)
 
+from custom_components.signalrgb.api import APIError, SignalRGBConnectionError
 from custom_components.signalrgb.const import DOMAIN
+from custom_components.signalrgb.coordinator import SignalRGBConfigEntry
 
 
-# This fixture bypasses the actual setup of the integration
-# since we only want to test the config flow. We test the
-# actual functionality of the integration in other test modules.
 @pytest.fixture(autouse=True)
-def bypass_setup_fixture():
-    """Prevent actual setup of the integration."""
-    with patch(
-        "custom_components.signalrgb.async_setup_entry",
-        return_value=True,
-    ):
+def bypass_setup() -> Generator[None]:
+    """Keep these tests focused on flow behavior."""
+    with patch("custom_components.signalrgb.async_setup_entry", return_value=True):
         yield
 
 
-# Mock config data to be used
-MOCK_CONFIG = {"host": "192.168.1.100", "port": 16038}
+async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
+    """Normalize the address and create a unique entry using a borrowed session."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert result["type"] is FlowResultType.FORM
+    session = async_get_clientsession(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": " PC.Example. ", "port": 16038}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {"host": "pc.example", "port": 16038}
+    mock_client.get_current_state.assert_awaited_once()
+    assert not session.closed
+    await hass.async_block_till_done()
 
 
-async def test_form(hass):
-    """Test we get the form."""
+@pytest.mark.parametrize(
+    ("error", "key"),
+    [
+        (SignalRGBConnectionError("offline"), "cannot_connect"),
+        (APIError("403", "Pro required"), "api_error"),
+        (RuntimeError("broken"), "unknown"),
+    ],
+)
+async def test_errors_preserve_shared_session(
+    hass: HomeAssistant, mock_client: AsyncMock, error: Exception, key: str
+) -> None:
+    """Every error path leaves HA's shared session open for other integrations."""
+    mock_client.get_current_state.side_effect = error
+    session = async_get_clientsession(hass)
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+        DOMAIN, context={"source": "user"}, data={"host": "pc", "port": 16038}
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
-    assert result["errors"] == {}
-
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            return_value=True,
-        ),
-        patch(
-            "signalrgb.AsyncSignalRGBClient.aclose",
-            return_value=None,
-        ),
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-        await hass.async_block_till_done()
-
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "192.168.1.100"
-    assert result2["data"] == MOCK_CONFIG
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": key}
+    assert not session.closed
 
 
-async def test_form_cannot_connect(hass):
-    """Test we handle cannot connect error."""
+@pytest.mark.parametrize("host", ["http://pc", "pc:16038", "", "pc/path", "bad host"])
+async def test_reject_url_and_invalid_host(
+    hass: HomeAssistant, mock_client: AsyncMock, host: str
+) -> None:
+    """Addresses cannot smuggle URL paths, ports, or credentials."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+        DOMAIN, context={"source": "user"}, data={"host": host, "port": 16038}
     )
-
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            side_effect=SignalRGBConnectionError("Cannot connect"),
-        ),
-        patch(
-            "signalrgb.AsyncSignalRGBClient.aclose",
-            return_value=None,
-        ),
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
-    assert result2["errors"] == {"base": "cannot_connect"}
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"host": "invalid_host"}
+    mock_client.get_current_state.assert_not_awaited()
 
 
-async def test_form_exception(hass):
-    """Test we handle general exception."""
+async def test_duplicate_aborts_before_network(
+    hass: HomeAssistant, config_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A configured host is rejected without probing it again."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+        DOMAIN, context={"source": "user"}, data=dict(config_entry.data)
     )
-
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            side_effect=SignalRGBException("Unknown error"),
-        ),
-        patch(
-            "signalrgb.AsyncSignalRGBClient.aclose",
-            return_value=None,
-        ),
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
-    assert result2["errors"] == {"base": "unknown"}
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    mock_client.get_current_state.assert_not_awaited()
 
 
-async def test_form_unexpected_exception(hass):
-    """Test we handle unexpected exception."""
+async def test_reconfigure_preserves_entry(
+    hass: HomeAssistant, config_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """Changing address updates the existing entry and its uniqueness key."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+        DOMAIN,
+        context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": config_entry.entry_id},
     )
-
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            side_effect=Exception("Unexpected error"),
-        ),
-        patch(
-            "signalrgb.AsyncSignalRGBClient.aclose",
-            return_value=None,
-        ),
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
-    assert result2["errors"] == {"base": "unknown"}
-
-
-async def test_flow_entry_already_exists(hass):
-    """Test user input for config_entry that already exists."""
-    first_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data=MOCK_CONFIG,
-        unique_id=f"{MOCK_CONFIG['host']}:{MOCK_CONFIG['port']}",
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "new-pc", "port": 16039}
     )
-    first_entry.add_to_hass(hass)
-
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    with (
-        patch(
-            "signalrgb.AsyncSignalRGBClient.get_current_effect",
-            return_value=True,
-        ),
-        patch(
-            "signalrgb.AsyncSignalRGBClient.aclose",
-            return_value=None,
-        ),
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            MOCK_CONFIG,
-        )
-
-    assert result2["type"] == data_entry_flow.FlowResultType.ABORT
-    assert result2["reason"] == "already_configured"
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert config_entry.data == {"host": "new-pc", "port": 16039}
+    assert config_entry.unique_id == "new-pc:16039"
+    await hass.async_block_till_done()

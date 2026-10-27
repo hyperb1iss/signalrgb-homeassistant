@@ -1,106 +1,74 @@
-"""Pytest configuration file for the tests directory."""
+"""Fixtures exercising the integration through Home Assistant."""
 
-# pylint: disable=unused-argument
+from collections.abc import Generator
+from typing import cast
+from unittest.mock import AsyncMock, patch
 
-import os
-from pathlib import Path
-import sys
-from unittest.mock import AsyncMock, MagicMock, patch
-
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.signalrgb.const import DEFAULT_PORT, DOMAIN
-
-# Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Add the custom_components directory to the Home Assistant component search path
-os.environ["CUSTOM_COMPONENTS"] = str(project_root / "custom_components")
+from custom_components.signalrgb.api import (
+    AsyncSignalRGBClient,
+    CurrentState,
+    Effect,
+    Layout,
+    Preset,
+)
+from custom_components.signalrgb.const import DOMAIN
+from custom_components.signalrgb.coordinator import SignalRGBConfigEntry
 
 pytest_plugins = ["pytest_homeassistant_custom_component"]
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Enable custom integrations in Home Assistant."""
-    return
+def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
+    """Allow Home Assistant to load this custom integration."""
 
 
 @pytest.fixture
-def mock_signalrgb_client():
-    """Mock AsyncSignalRGB client."""
-    with patch("signalrgb.AsyncSignalRGBClient") as mock_client:
-        client = mock_client.return_value
-        # Use AsyncMock for async methods
-        client.get_current_effect = AsyncMock()
-        client.get_current_state = AsyncMock()
-        client.get_effect = AsyncMock()
-        client.get_effects = AsyncMock()
-        client.apply_effect_by_name = AsyncMock()
-        client.get_layouts = AsyncMock()
-        client.get_current_layout = AsyncMock()
-        client.set_current_layout = AsyncMock()
-        client.apply_next_effect = AsyncMock()
-        client.apply_previous_effect = AsyncMock()
-        client.apply_random_effect = AsyncMock()
-        client.get_effect_presets = AsyncMock()
-        client.apply_effect_preset = AsyncMock()
-        client.get_effect_by_name = AsyncMock()
-        client.get_enabled = AsyncMock()
-        client.set_enabled = AsyncMock()
-        client.get_brightness = AsyncMock()
-        client.set_brightness = AsyncMock()
-        client.refresh_effects = AsyncMock()
-        client.aclose = AsyncMock()
+def mock_client() -> Generator[AsyncMock]:
+    """Mock only the HTTP client, leaving HA lifecycle and services real."""
+    client = AsyncMock(spec=AsyncSignalRGBClient)
+    client.get_current_state.return_value = CurrentState("rainbow", "Rainbow", True, 50)
+    client.get_effect.return_value = Effect("rainbow", "Rainbow")
+    client.get_effects.return_value = [Effect("rainbow", "Rainbow"), Effect("solid", "Solid")]
+    client.get_layouts.return_value = [Layout("Desk"), Layout("Room")]
+    client.get_current_layout.return_value = Layout("Desk")
+    client.get_effect_presets.return_value = [Preset("Default"), Preset("Soft")]
+    with (
+        patch("custom_components.signalrgb.AsyncSignalRGBClient", return_value=client),
+        patch("custom_components.signalrgb.config_flow.AsyncSignalRGBClient", return_value=client),
+    ):
         yield client
 
 
 @pytest.fixture
-def mock_config_entry():
-    """Mock configuration entry."""
-    return MagicMock(
-        version=1,
+def config_entry(hass: HomeAssistant) -> SignalRGBConfigEntry:
+    """Add a configuration entry with existing stable identity."""
+    entry = MockConfigEntry(
         domain=DOMAIN,
-        title="SignalRGB",
-        data={
-            CONF_HOST: "192.168.1.100",
-            CONF_PORT: DEFAULT_PORT,
-        },
-        source="user",
-        entry_id="test",
+        title="192.168.1.100",
+        data={"host": "192.168.1.100", "port": 16038},
         unique_id="192.168.1.100:16038",
     )
+    entry.add_to_hass(hass)
+    return cast(SignalRGBConfigEntry, entry)
 
 
 @pytest.fixture
-def mock_hass():
-    """Mock Home Assistant instance."""
-    hass = MagicMock()
-    hass.data = {DOMAIN: {}}
-    hass.async_add_executor_job = AsyncMock()
-    hass.config_entries = MagicMock()
-    hass.config_entries.async_forward_entry_setups = AsyncMock()
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    return hass
+async def setup_entry(
+    hass: HomeAssistant, config_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> SignalRGBConfigEntry:
+    """Load real platforms and their entities."""
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    return config_entry
 
 
-@pytest.fixture
-def mock_coordinator():
-    """Mock DataUpdateCoordinator."""
-    coordinator = MagicMock(spec=DataUpdateCoordinator)
-    coordinator.data = None
-    coordinator.async_request_refresh = AsyncMock()
-    coordinator.last_update_success = True
-    return coordinator
-
-
-@pytest.fixture
-def setup_entry(mock_hass, mock_config_entry, mock_signalrgb_client):
-    """Set up the entry in hass.data."""
-    mock_hass.data[DOMAIN][mock_config_entry.entry_id] = {
-        "client": mock_signalrgb_client,
-    }
-    return mock_hass
+def entity_id(hass: HomeAssistant, entry: SignalRGBConfigEntry, platform: str, key: str) -> str:
+    """Find entities by their stable registry IDs rather than generated names."""
+    result = er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"{entry.entry_id}_{key}")
+    assert result is not None
+    return result

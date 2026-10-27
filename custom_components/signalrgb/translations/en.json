@@ -1,20 +1,32 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured",
+      "reconfigure_successful": "SignalRGB connection settings updated."
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error",
+      "invalid_host": "Enter a hostname or IP address without a URL, path, or port.",
+      "api_error": "SignalRGB rejected the API request or returned an unsupported response. Check that the app is up to date, you are signed in, and your account has API access."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "port": "Port"
         },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "unknown": "Unexpected error"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "host": "Host",
-                    "port": "Port"
-                },
-                "title": "Setup SignalRGB"
-            }
+        "title": "Set up SignalRGB",
+        "description": "Enter the hostname or IP address of your SignalRGB PC. SignalRGB must be running and its local API must be reachable from Home Assistant."
+      },
+      "reconfigure": {
+        "title": "Reconfigure SignalRGB",
+        "description": "Update the host or port while keeping your existing entities and automations.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
         }
+      }
     }
+  }
 }
