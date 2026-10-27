@@ -130,3 +130,18 @@ async def test_partial_command_failure_refreshes_actual_state(
     assert state is not None
     assert state.attributes["brightness"] == 255
     assert state.attributes["effect"] == "Rainbow"
+
+
+async def test_turn_on_ignores_stale_cached_enabled_state(
+    hass: HomeAssistant, setup_entry: SignalRGBConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A desktop-side power change cannot turn a service call into a no-op."""
+    assert setup_entry.runtime_data.data.state.enabled
+    mock_client.get_current_state.return_value = CurrentState("rainbow", "Rainbow", False, 50)
+    await hass.services.async_call(
+        "light",
+        "turn_on",
+        {"entity_id": entity_id(hass, setup_entry, "light", "light")},
+        blocking=True,
+    )
+    mock_client.set_enabled.assert_awaited_once_with(True)

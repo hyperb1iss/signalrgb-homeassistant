@@ -82,8 +82,7 @@ class SignalRGBLight(SignalRGBEntity, LightEntity):
 
         async def command() -> None:
             client = self.coordinator.client
-            if not self.is_on:
-                await client.set_enabled(True)
+            await client.set_enabled(True)
             if ATTR_BRIGHTNESS in kwargs:
                 await client.set_brightness(round(kwargs[ATTR_BRIGHTNESS] * 100 / 255))
             if effect_id is not None:

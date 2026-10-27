@@ -15,7 +15,6 @@ from .api import (
     CurrentState,
     Effect,
     Layout,
-    NotFoundError,
     Preset,
     SignalRGBError,
 )
@@ -60,7 +59,7 @@ class SignalRGBCoordinator(DataUpdateCoordinator[SignalRGBData]):
             layouts, current = await asyncio.gather(
                 self.client.get_layouts(), self.client.get_current_layout()
             )
-        except NotFoundError as err:
+        except SignalRGBError as err:
             LOGGER.debug("SignalRGB layouts unavailable: %s", err)
             return None, None
         return layouts, current
@@ -71,7 +70,7 @@ class SignalRGBCoordinator(DataUpdateCoordinator[SignalRGBData]):
             return []
         try:
             return await self.client.get_effect_presets(effect_id)
-        except NotFoundError as err:
+        except SignalRGBError as err:
             LOGGER.debug("SignalRGB presets unavailable: %s", err)
             return None
 
@@ -81,7 +80,8 @@ class SignalRGBCoordinator(DataUpdateCoordinator[SignalRGBData]):
             return None
         try:
             return await self.client.get_effect(effect_id)
-        except NotFoundError:
+        except SignalRGBError as err:
+            LOGGER.debug("SignalRGB effect metadata unavailable: %s", err)
             return None
 
     async def _async_update_data(self) -> SignalRGBData:
