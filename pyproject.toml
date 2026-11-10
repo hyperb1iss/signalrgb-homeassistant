@@ -22,8 +22,8 @@ dependencies = [
 dev = [
     "pytest-homeassistant-custom-component==0.13.375",
     "pre-commit>=4.7.0",
-    "ruff==0.17.3",
-    "ty==0.0.92",
+    "ruff==0.17.4",
+    "ty==0.0.99",
 ]
 
 [project.urls]
